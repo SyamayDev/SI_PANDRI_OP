@@ -25,7 +25,7 @@
 
   const ACTS = [
     {
-      id: 'b1', title: 'Sebuah Laundry Kecil yang Sibuk',
+      id: 'b1', title: 'Sebuah Laundry Kecil yang Sibuk', peta: 'Laundry yang Sibuk',
       goal: 'Mengenal Bu Ratna dan pekerjaan sehari-harinya di Parfait Laundry.',
       learn: 'Pengelolaan laundry terdiri dari tahapan yang saling berhubungan.',
       summary: [
@@ -41,7 +41,7 @@
       }
     },
     {
-      id: 'b2', title: 'Tiga Orang Menawarkan Bantuan',
+      id: 'b2', title: 'Tiga Orang Menawarkan Bantuan', peta: 'Tawaran Bantuan',
       goal: 'Gilbert, Sarah, dan Syahril mendengarkan kendala Bu Ratna sebelum menawarkan solusi.',
       learn: 'Analisis kebutuhan dimulai dari mendengarkan pengguna, bukan dari fitur.',
       summary: [
@@ -57,7 +57,7 @@
       }
     },
     {
-      id: 'b3', title: 'Menemukan Akar Permasalahan',
+      id: 'b3', title: 'Menemukan Akar Permasalahan', peta: 'Akar Masalah',
       goal: 'Menguraikan proses kerja laundry dan memasangkan masalah dengan kebutuhan sistem.',
       learn: 'Setiap kebutuhan sistem harus menjawab masalah yang nyata.',
       summary: [
@@ -74,7 +74,7 @@
       }
     },
     {
-      id: 'b4', title: 'Memperkenalkan SI-PANDRI',
+      id: 'b4', title: 'Memperkenalkan SI-PANDRI', peta: 'Kenalan SI-PANDRI',
       goal: 'Mengenal SI-PANDRI — Sistem Pengelolaan Parfait Laundry — dan menu-menunya.',
       learn: 'SI-PANDRI adalah program terminal Free Pascal dengan menu Admin dan menu Pelanggan.',
       summary: [
@@ -90,7 +90,7 @@
       }
     },
     {
-      id: 'b5', title: 'Simulasi Perjalanan Satu Pesanan',
+      id: 'b5', title: 'Simulasi Perjalanan Satu Pesanan', peta: 'Simulasi Pesanan',
       goal: 'Memproses satu pesanan fiktif dari pelanggan datang sampai cucian diserahkan.',
       learn: 'Alur Input → Proses → Output pada pesanan laundry.',
       parts: ['Pelanggan datang', 'Data pesanan dicatat', 'Cucian ditimbang', 'Biaya dihitung', 'Pesanan dikelola', 'Pembayaran diinformasikan', 'Pesanan selesai'],
@@ -108,7 +108,7 @@
       }
     },
     {
-      id: 'b6', title: 'Sebelum dan Sesudah',
+      id: 'b6', title: 'Sebelum dan Sesudah', peta: 'Sebelum & Sesudah',
       goal: 'Membandingkan alur kerja manual dengan alur yang dibantu SI-PANDRI secara adil.',
       learn: 'Menilai manfaat berdasarkan fitur yang benar-benar ada, tanpa klaim berlebihan.',
       summary: [
@@ -124,7 +124,7 @@
       }
     },
     {
-      id: 'b7', title: 'Logika di Balik Sistem',
+      id: 'b7', title: 'Logika di Balik Sistem', peta: 'Logika Program',
       goal: 'Melihat konsep Dasar Pemrograman yang benar-benar dipakai di SI_PANDRI.pas.',
       learn: 'Input/output, percabangan, perulangan, perhitungan, validasi, dan file.',
       summary: [
@@ -141,7 +141,7 @@
       }
     },
     {
-      id: 'b8', title: 'Bu Ratna Mencoba Sendiri',
+      id: 'b8', title: 'Bu Ratna Mencoba Sendiri', peta: 'Bu Ratna Mencoba',
       goal: 'Bu Ratna memakai SI-PANDRI untuk beberapa situasi, didampingi tim.',
       learn: 'Memilih tindakan yang benar sesuai konteks dan fitur yang tersedia.',
       summary: [
@@ -158,7 +158,7 @@
       }
     },
     {
-      id: 'b9', title: 'Laundry yang Lebih Teratur',
+      id: 'b9', title: 'Laundry yang Lebih Teratur', peta: 'Laundry Teratur',
       goal: 'Menutup cerita dan merangkum masalah, solusi, cara kerja, konsep, pengujian, dan manfaat.',
       learn: 'Pemrograman dasar dapat membantu kebutuhan nyata dengan cara yang sederhana.',
       summary: [
@@ -215,7 +215,7 @@
   const B1_BUKU = [
     { text: 'Sen · Laila · Reguler · 5 kg · sudah ambil', correct: false, why: 'Itu Laila, bukan Lala. Namanya mirip!' },
     { text: 'Sel · Lala · Reguler · ? kg', correct: false, why: 'Itu catatan hari Selasa. Kak Lala datang hari Senin.' },
-    { text: 'S̶e̶n̶ ̶·̶ ̶L̶a̶l̶a̶ ̶·̶ ̶R̶e̶g̶u̶l̶e̶r̶', correct: false, why: 'Catatan ini dicoret. Mungkin salah tulis, jadi tidak bisa dipakai.' },
+    { text: 'Sen · Lala · Reguler', coret: true, correct: false, why: 'Catatan ini dicoret. Mungkin salah tulis, jadi tidak bisa dipakai.' },
     { text: 'Sen · Lia · Express · 2,5 kg · blm bayar', correct: false, why: 'Itu Lia. Lagi-lagi nama yang mirip.' },
     { text: 'Sen · Lala · Express · 3 kg · dicuci?', correct: true, why: 'Ketemu! Tapi statusnya hanya ditulis “dicuci?”.' },
     { text: 'Rab · Dimas · Reguler · 4 kg', correct: false, why: 'Itu pesanan Mas Dimas hari Rabu.' }

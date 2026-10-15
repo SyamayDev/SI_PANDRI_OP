@@ -421,7 +421,8 @@
       const grid = G.el('div', 'pick-grid cols-' + cols);
       const counter = G.el('p', 'counter', `Ditemukan: 0 / ${need}`);
       const btns = items.map(it => {
-        const b = G.el('button', 'card-btn', G.rich(it.text));
+        const b = G.el('button', 'card-btn' + (it.coret ? ' coret' : ''), G.rich(it.text));
+        if (it.coret) b.setAttribute('aria-label', it.text + ' (dicoret)');
         b.addEventListener('click', () => pick(it, b));
         grid.appendChild(b);
         return b;

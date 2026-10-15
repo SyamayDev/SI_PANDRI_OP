@@ -31,14 +31,14 @@
       <div class="hud-right">
         <span id="hud-mode" class="mode-badge" hidden>MODE PRESENTER</span>
         <span id="hud-xp" class="xp" title="XP (Mode Cerita)">0 XP</span>
-        <button id="btn-map" class="hbtn" title="Peta babak (B)"><span class="ico">▤</span><span class="lbl">Babak</span></button>
-        <button id="btn-journal" class="hbtn" title="Jurnal perjalanan (J)"><span class="ico">✎</span><span class="lbl">Jurnal</span></button>
-        <button id="btn-sound" class="hbtn" title="Suara hidup/mati (M)" aria-pressed="true"><span class="ico">♪</span><span class="lbl">Suara</span></button>
-        <button id="btn-settings" class="hbtn" title="Pengaturan"><span class="ico">⚙</span><span class="lbl">Atur</span></button>
-        <button id="btn-presenter" class="hbtn" title="Mode Presenter"><span class="ico">▶</span><span class="lbl">Presenter</span></button>
-        <button id="btn-full" class="hbtn" title="Layar penuh (F)"><span class="ico">⛶</span><span class="lbl">Penuh</span></button>
-        <button id="btn-help" class="hbtn" title="Bantuan (H)"><span class="ico">?</span><span class="lbl">Bantuan</span></button>
-        <button id="btn-more" class="hbtn" title="Menu" aria-label="Menu"><span class="ico">☰</span></button>
+        <button id="btn-map" class="hbtn" title="Peta babak (B)"><span class="ico" data-ikon="peta"></span><span class="lbl">Babak</span></button>
+        <button id="btn-journal" class="hbtn" title="Jurnal perjalanan (J)"><span class="ico" data-ikon="jurnal"></span><span class="lbl">Jurnal</span></button>
+        <button id="btn-sound" class="hbtn" title="Suara hidup/mati (M)" aria-pressed="true"><span class="ico" data-ikon="suara"></span><span class="lbl">Suara</span></button>
+        <button id="btn-settings" class="hbtn" title="Pengaturan"><span class="ico" data-ikon="atur"></span><span class="lbl">Atur</span></button>
+        <button id="btn-presenter" class="hbtn" title="Mode Presenter"><span class="ico" data-ikon="presenter"></span><span class="lbl">Presenter</span></button>
+        <button id="btn-full" class="hbtn" title="Layar penuh (F)"><span class="ico" data-ikon="penuh"></span><span class="lbl">Penuh</span></button>
+        <button id="btn-help" class="hbtn" title="Bantuan (H)"><span class="ico" data-ikon="bantuan"></span><span class="lbl">Bantuan</span></button>
+        <button id="btn-more" class="hbtn" title="Menu" aria-label="Menu"><span class="ico" data-ikon="menu"></span></button>
       </div>
     </header>
 
@@ -122,8 +122,8 @@
   <!-- Layar judul / menu utama -->
   <section id="title-screen" aria-labelledby="title-h">
     <div class="title-corner">
-      <button id="tc-sound" class="tc-btn" type="button" title="Suara hidup/mati" aria-label="Suara hidup/mati">♪</button>
-      <button id="tc-full" class="tc-btn" type="button" title="Layar penuh" aria-label="Layar penuh">⛶</button>
+      <button id="tc-sound" class="tc-btn" type="button" title="Suara hidup/mati" aria-label="Suara hidup/mati"><span data-ikon="suara"></span></button>
+      <button id="tc-full" class="tc-btn" type="button" title="Layar penuh" aria-label="Layar penuh"><span data-ikon="penuh"></span></button>
     </div>
     <div class="title-panel">
       <p class="tp-kicker">Proyek UTS Dasar Pemrograman · Free Pascal</p>
@@ -131,13 +131,13 @@
       <p class="tp-sub">Misi Laundry Beres!</p>
       <p class="tp-tag">Dari Laundry yang Kewalahan Menjadi Laundry yang Lebih Teratur</p>
       <nav class="game-menu" aria-label="Menu utama">
-        <button id="btn-continue" class="gm-item gm-gold" type="button" hidden><span class="gm-label">Lanjutkan</span><span class="gm-detail" id="continue-detail"></span></button>
-        <button id="btn-start" class="gm-item gm-gold" type="button"><span class="gm-label" id="start-label">Mulai Cerita</span><span class="gm-detail">Mode Cerita · 9 babak</span></button>
-        <button id="btn-presenter-start" class="gm-item" type="button"><span class="gm-label">Mode Presenter</span><span class="gm-detail">Pilih babak bebas untuk presentasi kelas</span></button>
+        <button id="btn-continue" class="gm-item gm-gold" type="button" hidden><span class="gm-ikon" data-ikon="lanjut"></span><span class="gm-label">Lanjutkan</span><span class="gm-detail" id="continue-detail"></span></button>
+        <button id="btn-start" class="gm-item gm-gold" type="button"><span class="gm-ikon" data-ikon="main"></span><span class="gm-label" id="start-label">Mulai Cerita</span><span class="gm-detail">Mode Cerita · 9 babak</span></button>
+        <button id="btn-presenter-start" class="gm-item" type="button"><span class="gm-ikon" data-ikon="presenter"></span><span class="gm-label">Mode Presenter</span><span class="gm-detail">Pilih babak bebas untuk presentasi kelas</span></button>
         <div class="gm-row">
-          <button id="btn-title-map" class="gm-mini" type="button">Pilih Babak</button>
-          <button id="btn-title-settings" class="gm-mini" type="button">Pengaturan</button>
-          <button id="btn-title-help" class="gm-mini" type="button">Bantuan</button>
+          <button id="btn-title-map" class="gm-mini" type="button"><span data-ikon="peta"></span><span>Pilih Babak</span></button>
+          <button id="btn-title-settings" class="gm-mini" type="button"><span data-ikon="atur"></span><span>Pengaturan</span></button>
+          <button id="btn-title-help" class="gm-mini" type="button"><span data-ikon="bantuan"></span><span>Bantuan</span></button>
         </div>
       </nav>
       <p id="title-progress" class="tp-progress"></p>
@@ -158,22 +158,44 @@ Writeln('Total biaya  : ', Rupiah(p.totalBiaya));</pre><figcaption>SI_PANDRI.pas
   <dialog id="dlg-more" class="small" aria-labelledby="more-h">
     <header class="dlg-head"><h2 id="more-h">Menu</h2><button class="btn btn-small" data-close>Tutup</button></header>
     <div class="more-grid">
-      <button class="btn" data-act="map">▤ Peta babak</button>
-      <button class="btn" data-act="journal">✎ Jurnal</button>
-      <button class="btn" data-act="settings">⚙ Pengaturan</button>
-      <button class="btn" data-act="full">⛶ Layar penuh</button>
-      <button class="btn" data-act="presenter">▶ Mode Presenter</button>
-      <button class="btn" data-act="help">? Bantuan</button>
-      <button class="btn" data-act="log">☷ Riwayat dialog</button>
-      <button class="btn btn-primary" data-act="home">⌂ Menu utama</button>
+      <button class="btn" data-act="map"><span data-ikon="peta"></span>Peta babak</button>
+      <button class="btn" data-act="journal"><span data-ikon="jurnal"></span>Jurnal</button>
+      <button class="btn" data-act="settings"><span data-ikon="atur"></span>Pengaturan</button>
+      <button class="btn" data-act="full"><span data-ikon="penuh"></span>Layar penuh</button>
+      <button class="btn" data-act="presenter"><span data-ikon="presenter"></span>Mode Presenter</button>
+      <button class="btn" data-act="help"><span data-ikon="bantuan"></span>Bantuan</button>
+      <button class="btn" data-act="log"><span data-ikon="riwayat"></span>Riwayat dialog</button>
+      <button class="btn btn-primary" data-act="home"><span data-ikon="rumah"></span>Menu utama</button>
     </div>
   </dialog>
 
   <!-- Peta babak -->
   <dialog id="dlg-map" aria-labelledby="map-h">
-    <header class="dlg-head"><h2 id="map-h">Peta Babak</h2><button class="btn btn-small" data-close>Tutup</button></header>
-    <p id="map-note" class="muted"></p>
-    <ol id="map-list"></ol>
+    <header class="peta-top">
+      <h2 id="map-h">Peta Babak</h2>
+      <span id="map-mode" class="peta-chip">Mode Cerita</span>
+      <span id="map-prog" class="peta-chip gold"></span>
+      <p id="map-note" class="peta-note"></p>
+      <button class="btn btn-small" data-close>Tutup</button>
+    </header>
+    <div class="peta-wrap">
+      <div class="peta" id="peta">
+        <canvas id="peta-bg" width="576" height="304" aria-hidden="true"></canvas>
+        <ol id="map-list" aria-label="Pemberhentian babak"></ol>
+        <div id="peta-ratna" aria-hidden="true"><canvas width="48" height="64"></canvas></div>
+      </div>
+    </div>
+    <section id="map-info" class="peta-info" aria-live="polite">
+      <canvas id="pi-face" width="40" height="38" aria-hidden="true"></canvas>
+      <div class="pi-text">
+        <p id="pi-kicker" class="pi-kicker"></p>
+        <h3 id="pi-title"></h3>
+        <p id="pi-goal" class="pi-goal"></p>
+        <p class="pi-say"><b>Bu Ratna:</b> <span id="pi-say"></span></p>
+        <p class="peta-hint" aria-hidden="true">Tip: ← → pilih babak · klik lagi atau Enter untuk bermain</p>
+      </div>
+      <div id="pi-actions" class="pi-actions"></div>
+    </section>
   </dialog>
 
   <!-- Jurnal -->
@@ -253,6 +275,8 @@ Writeln('Total biaya  : ', Rupiah(p.totalBiaya));</pre><figcaption>SI_PANDRI.pas
   <script src="js/art.js"></script>
   <script src="js/engine.js"></script>
   <script src="js/acts.js"></script>
+  <script src="js/ikon.js"></script>
+  <script src="js/peta.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

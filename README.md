@@ -29,6 +29,8 @@ game/
   js/acts.js             Naskah dan misi 9 babak
   js/engine.js           Mesin cerita: dialog, misi, progres, XP, achievement
   js/art.js              Semua grafis pixel (karakter & latar) digambar dengan kode
+  js/peta.js             Peta Babak: peta pixel berjalan berkelok, Bu Ratna berjalan menyusuri jalan
+  js/ikon.js             Ikon pixel untuk tombol menu dan HUD
   js/main.js             Layar judul, menu, Mode Presenter, keyboard
   js/kode-pascal.js      Cuplikan kode asli SI_PANDRI.pas (dibuat otomatis)
   assets/fonts/          Font lokal (SIL Open Font License)
@@ -129,6 +131,7 @@ Tokoh: **Bu Ratna** (pemilik Parfait Laundry), **Gilbert** (harimau jantan berka
 
 - **Mode Cerita**: babak terbuka berurutan setelah misi selesai. Progres tersimpan otomatis per bagian babak di `localStorage` browser. XP diberikan sekali per misi (mengulang tidak menambah XP). Ada jurnal perjalanan dan 11 achievement.
 - **Mode Presenter** (tombol di layar judul atau HUD): semua babak dan ketujuh langkah Babak 5 bisa dipilih langsung, kecepatan dialog bisa diatur (Lambat/Normal/Cepat/Instan), ada **Catatan Presenter** (ringkasan, kaitan dengan aplikasi Pascal, kalimat transisi, alur presentasi), tombol **Tampilkan jawaban**, **Ulang bagian**, dan **Teks besar**. Mode Presenter **tidak mengubah** save Mode Cerita.
+- **Peta Babak** (tombol Pilih Babak / Babak, atau tombol `B`): peta petualangan dengan jalan berkelok dari Parfait Laundry (Babak 1) sampai laundry yang lebih teratur (Babak 9). Pilih pemberhentian, lalu Bu Ratna berjalan menyusuri jalan ke sana. Klik pemberhentian yang sama sekali lagi, tekan Enter, atau tombol di panel bawah untuk bermain. Panah ←/→ dan angka 1–9 memilih babak. Babak terkunci tetap bisa dilihat keterangannya tetapi tidak bisa dimainkan di Mode Cerita.
 - Dialog tidak pernah berjalan sendiri; selalu menunggu klik atau Spasi.
 
 Pintasan: `Spasi`/`→`/`PageDown` lanjut · `B` peta babak · `J` jurnal · `L` riwayat dialog · `R` ulang bagian · `M` suara · `F` layar penuh · Mode Presenter: `N` catatan, `S` tampilkan jawaban, `←`/`PageUp` bagian sebelumnya.
@@ -157,7 +160,7 @@ Semua perintah dijalankan dari folder proyek. Butuh Node.js 22+ (tanpa `npm inst
 |---|---|---|
 | `node tests/uji_pascal.js` | Mengompilasi `SI_PANDRI.pas` (FPC 3.2.2) lalu menjalankan 14 skenario dengan input terskrip di folder sementara: login admin, registrasi & validasi, login gagal, pesanan, berat 0/negatif/teks, Reguler 3,5 kg = Rp 21.000, Express 2,5 kg = Rp 25.000, status bayar & cucian, aturan lompat tahap, perubahan tarif tidak mengubah total lama, tautan WhatsApp, hak akses pelanggan, laporan, persistensi antar-proses | **14/14 lulus** |
 | `node tools/ekstrak_cuplikan.js --cek` | Cuplikan kode di game sama persis dengan `SI_PANDRI.pas` | **Lulus (13 cuplikan)** |
-| `node tests/uji_game.js` | Game di Chrome headless: layar mulai & menu (keyboard), tidak ada error JavaScript, gating babak, umpan balik jawaban salah, seluruh 9 babak bisa ditamatkan lewat UI, anti-farming XP, save & reload, Mode Presenter tidak mengubah save, jalur pemain manual (validasi registrasi, batal pesanan, notifikasi ditolak sebelum siap, jelajah menu, Spasi), reset dengan konfirmasi, tanpa overflow di 1920×1080, 1366×768, 1024×768, dan **layar sentuh: posisi tegak 390×844 menampilkan layar "Putar perangkatmu"; di 7 ukuran mendatar (568×320, 667×375, 740×360, 844×390, 932×430, tablet 1024×768 dan 1180×820) setiap babak dan setiap bagian dicek muat di layar tanpa menutupi dialog**, teks narator selebar teks tokoh, menu utama di 8 ukuran layar lebar (tokoh tidak masuk ke belakang panel, kartu nota tidak menimpa apa pun), kontras tombol saat di-hover | **103/103 lulus** |
+| `node tests/uji_game.js` | Game di Chrome headless: layar mulai & menu (keyboard), tidak ada error JavaScript, gating babak, umpan balik jawaban salah, seluruh 9 babak bisa ditamatkan lewat UI, anti-farming XP, save & reload, Mode Presenter tidak mengubah save, jalur pemain manual (validasi registrasi, batal pesanan, notifikasi ditolak sebelum siap, jelajah menu, Spasi), reset dengan konfirmasi, tanpa overflow di 1920×1080, 1366×768, 1024×768, dan **layar sentuh: posisi tegak 390×844 menampilkan layar "Putar perangkatmu"; di 7 ukuran mendatar (568×320, 667×375, 740×360, 844×390, 932×430, tablet 1024×768 dan 1180×820) setiap babak dan setiap bagian dicek muat di layar tanpa menutupi dialog**, teks narator selebar teks tokoh, menu utama di 8 ukuran layar lebar (tokoh tidak masuk ke belakang panel, kartu nota tidak menimpa apa pun), kontras tombol saat di-hover, **Peta Babak** (papan nama tidak saling menimpa, babak terkunci tidak bisa dimainkan, Bu Ratna berjalan menyusuri titik-titik jalan dan bukan garis lurus, panah keyboard, klik ulang untuk bermain, penanda cukup besar disentuh di HP), buku catatan Kak Lala (tidak miring, garis tidak menembus teks) | **117/117 lulus** |
 
 Selain itu, `SI_PANDRI.exe` versi baru dicoba membaca file `.dat` lama (salinan) dan menampilkan pesanan serta laporan dengan benar.
 

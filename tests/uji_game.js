@@ -105,10 +105,11 @@ async function main() {
       if (G.cur && G.cur.api && G.cur.api.solve) { G.cur.api.solve(); return 'solve'; }
       return 'idle';
     };`;
+  // Cek kondisi dan langkah otomatis dalam SATU evaluasi, supaya misi yang baru muncul
+  // di antara keduanya tidak ikut diselesaikan otomatis.
   const mainkanSampai = async (kondisi, maks = 4000) => {
     for (let i = 0; i < maks; i++) {
-      if (await ev(kondisi)) return true;
-      await ev('window.__autoStep()');
+      if (await ev(`(() => { if (${kondisi}) return true; window.__autoStep(); return false; })()`)) return true;
       await sleep(25);
     }
     return false;
@@ -150,6 +151,24 @@ async function main() {
   cek('Babak 2 terkunci sebelum Babak 1 selesai', await ev(`!G.isUnlocked(1) && G.actStatus(1) === 'terkunci'`));
   await ev(`document.querySelectorAll('.pip')[1].click()`);
   cek('Klik babak terkunci membuka peta dengan status Terkunci', await tunggu(`document.querySelector('#dlg-map').open && document.querySelectorAll('.map-item')[1].classList.contains('terkunci')`));
+  cek('Peta: 9 pemberhentian dan Bu Ratna berdiri di Babak 1', await ev(`document.querySelectorAll('#map-list .map-item').length === 9
+      && Math.abs(+document.querySelector('#peta-ratna').dataset.x - PETA.HENTI[0].x) < 1 && Math.abs(+document.querySelector('#peta-ratna').dataset.y - PETA.HENTI[0].y) < 1`));
+  cek('Peta: babak terkunci tidak bisa dimainkan dan Bu Ratna tidak berpindah', await ev(`new Promise(res => {
+      const r = document.querySelector('#peta-ratna'), x0 = r.dataset.x;
+      PETA.pilih(1);
+      setTimeout(() => res(!!document.querySelector('#pi-actions .pi-locked') && !document.querySelector('#pi-play') && r.dataset.x === x0), 300);
+    })`));
+  cek('Peta 1600×900: papan nama tidak saling menimpa dan semua di dalam peta', await ev(`(() => {
+      const w = document.querySelector('.peta-wrap').getBoundingClientRect();
+      const papan = [...document.querySelectorAll('.ps-sign')].map(e => e.getBoundingClientRect());
+      const pin = [...document.querySelectorAll('.ps-pin')].map(e => e.getBoundingClientRect());
+      const tumpuk = (a, b) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
+      const dalam = r => r.left >= w.left - 1 && r.right <= w.right + 1 && r.top >= w.top - 1 && r.bottom <= w.bottom + 1;
+      if (papan.length !== 9 || papan.some(p => p.width < 40)) return false;
+      for (let i = 0; i < 9; i++) for (let j = i + 1; j < 9; j++) if (tumpuk(papan[i], papan[j])) return false;
+      return papan.every(dalam) && pin.every(dalam);
+    })()`));
+  await shot('01b-peta-cerita');
   await ev(`document.querySelector('#dlg-map').close()`);
 
   // 3. Mulai cerita + umpan balik jawaban salah
@@ -213,8 +232,41 @@ async function main() {
   const saveSebelum = await ev(`localStorage.getItem('sipandri-misi-laundry-v1')`);
   await ev(`document.querySelector('#btn-presenter-start').click()`);
   cek('Mode Presenter membuka peta dengan semua babak terbuka', await tunggu(`G.mode === 'presenter' && document.querySelector('#dlg-map').open && !document.querySelector('.map-item.terkunci')`));
-  cek('Peta presenter menampilkan tombol langkah Babak 5', await ev(`[...document.querySelectorAll('#map-list button')].some(b => /3\\. Cucian ditimbang/.test(b.textContent))`));
-  await ev(`[...document.querySelectorAll('#map-list button')].find(b => /3\\. Cucian ditimbang/.test(b.textContent)).click()`);
+  const jejak = JSON.parse(await ev(`new Promise(res => {
+      G.settings.reduce = false;
+      PETA.pilih(0, { jalan: false });
+      const r = document.querySelector('#peta-ratna'), s = [];
+      PETA.pilih(8);
+      const t0 = performance.now();
+      (function f() {
+        s.push([+r.dataset.x, +r.dataset.y]);
+        if (PETA.berjalan && performance.now() - t0 < 6000) requestAnimationFrame(f);
+        else { G.settings.reduce = true; res(JSON.stringify({ s, jalur: PETA.JALUR, akhir: PETA.HENTI[8] })); }
+      })();
+    })`));
+  {
+    const { s: sampel, jalur, akhir } = jejak;
+    const keJalan = p => Math.min(...jalur.map(q => Math.hypot(p[0] - q[0], p[1] - q[1])));
+    const a = sampel[0], b = sampel[sampel.length - 1];
+    const keGaris = p => Math.abs((b[0] - a[0]) * (a[1] - p[1]) - (a[0] - p[0]) * (b[1] - a[1])) / Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const meleset = Math.max(...sampel.map(keJalan)), belok = Math.max(...sampel.map(keGaris));
+    cek('Peta: Bu Ratna berjalan menyusuri jalan berkelok ke Babak 9 (bukan garis lurus)',
+      sampel.length > 20 && meleset < 1.5 && belok > 40 && Math.hypot(b[0] - akhir.x, b[1] - akhir.y) < 1,
+      `sampel ${sampel.length}, jarak terjauh dari jalan ${meleset.toFixed(2)}, simpangan dari garis lurus ${belok.toFixed(1)}`);
+  }
+  await ev(`PETA.pilih(2, { jalan: false, fokus: true }); true`);
+  await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowRight', code: 'ArrowRight', windowsVirtualKeyCode: 39 });
+  await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowRight', code: 'ArrowRight', windowsVirtualKeyCode: 39 });
+  cek('Peta: panah kanan memindah pilihan ke babak berikutnya', await tunggu(`PETA.pilihan === 3 && document.activeElement === document.querySelectorAll('.peta-stop')[3]`));
+  await tunggu('!PETA.berjalan', 4000);
+  await ev(`document.querySelectorAll('.peta-stop')[3].click()`);
+  cek('Peta: klik lagi pemberhentian terpilih langsung memainkan babaknya', await tunggu(`G.actIndex === 3 && !document.querySelector('#dlg-map').open`));
+  await ev(`document.querySelector('#btn-map').click()`);
+  await tunggu(`document.querySelector('#dlg-map').open`);
+  await ev(`PETA.pilih(4, { jalan: false }); true`);
+  cek('Peta presenter menampilkan tombol langkah Babak 5', await ev(`[...document.querySelectorAll('#pi-actions button')].some(b => /3\\. Cucian ditimbang/.test(b.textContent))`));
+  await shot('05b-peta-presenter');
+  await ev(`[...document.querySelectorAll('#pi-actions button')].find(b => /3\\. Cucian ditimbang/.test(b.textContent)).click()`);
   cek('Lompat langsung ke Babak 5, langkah 3', await tunggu(`G.actIndex === 4 && G.partIndex === 2`));
   cek('Bilah presenter tampil', await ev(`!document.querySelector('#presenter-bar').hidden && !document.querySelector('#hud-mode').hidden`));
   await mainkanSampai(`!!document.querySelector('.scale-game')`, 400);
@@ -241,7 +293,8 @@ async function main() {
   await shot('08-presenter-hitung');
   await mainkanSampai(`G.partIndex === 4 && !!document.querySelector('.status-row')`, 800);
   await ev(`[...document.querySelectorAll('.status-btn')].find(b => /Selesai/.test(b.textContent)).click()`);
-  cek('Status tidak boleh melompati tahap (aturan yang sama dengan Pascal)', await ev(`/Status tidak boleh melompati tahap/.test(document.querySelector('.status-row + .feedback').textContent)`));
+  cek('Status tidak boleh melompati tahap (aturan yang sama dengan Pascal)', await ev(`/Status tidak boleh melompati tahap/.test(document.querySelector('.status-row + .feedback').textContent)`),
+    await ev(`JSON.stringify({ part: G.partIndex, sim: G.prog.sim && G.prog.sim.status, fb: (document.querySelector('.status-row + .feedback') || {}).textContent })`));
   await shot('09-status');
   const progSesudah = await ev(`JSON.stringify(JSON.parse(localStorage.getItem('sipandri-misi-laundry-v1')).progress)`);
   cek('Mode Presenter tidak mengubah save Mode Cerita', progSesudah === JSON.stringify(JSON.parse(saveSebelum).progress));
@@ -327,6 +380,21 @@ async function main() {
   await ev(`document.querySelector('#pb-exit').click()`);
   cek('Keluar presenter kembali ke Mode Cerita', await tunggu(`G.mode === 'story' && !document.querySelector('#title-screen').hidden && G.prog.xp === ${xpTamat}`));
 
+  await ev(`G.jumpTo(0, 1); true`);
+  await tunggu('G.actIndex === 0 && G.partIndex === 1');
+  await mainkanSampai(`!!document.querySelector('.notebook')`, 600);
+  cek('Buku catatan Kak Lala: tidak miring, garis biru tidak menembus teks, coretan memakai garis coret', await ev(`(() => {
+      const nb = document.querySelector('.notebook'), cs = getComputedStyle(nb);
+      const coret = document.querySelector('.notebook .card-btn.coret');
+      const kartu = [...document.querySelectorAll('.notebook .card-btn')];
+      return cs.transform === 'none' && cs.backgroundImage === 'none' && !!coret
+        && getComputedStyle(coret).textDecorationLine.includes('line-through') && !/\\u0336/.test(nb.textContent)
+        && kartu.every(k => getComputedStyle(k).backgroundImage === 'none');
+    })()`));
+  await shot('07b-buku-catatan');
+  await ev(`document.querySelector('#hud-home').click()`);
+  await tunggu(`!document.querySelector('#title-screen').hidden`);
+
   // 8. Ukuran layar
   const ukuran = [[1920, 1080], [1366, 768], [1024, 768], [390, 844, true]];
   for (const [w, h, mob] of ukuran) {
@@ -362,6 +430,9 @@ async function main() {
       const salah = [];
       if (tokoh.some(t => tumpuk(t, panel))) salah.push('tokoh menumpuk panel');
       if (notaTampil && lain.some(x => tumpuk(kotak(nota), x))) salah.push('nota menumpuk');
+      if (getComputedStyle(hint).display !== 'none' && tumpuk(kotak(hint), panel)) salah.push('petunjuk menimpa panel');
+      const tp = document.querySelector('.title-panel');
+      if (innerHeight >= 760 && tp.scrollHeight > tp.clientHeight + 1) salah.push('panel menu perlu digulir');
       return JSON.stringify({ salah, notaTampil });
     })()`;
   const notaTampilDi = [];
@@ -428,6 +499,14 @@ async function main() {
     await shot(`11-mendatar-${w}x${h}-menu`);
     await ev(`document.querySelector('#btn-presenter-start').click()`);
     await tunggu(`G.mode === 'presenter'`);
+    await sleep(150);
+    cek(`${jenis} mendatar ${w}×${h}: peta babak muat, penanda cukup besar untuk disentuh`, await noOverflow() && await ev(`(() => {
+      const w = document.querySelector('.peta-wrap').getBoundingClientRect(), info = document.querySelector('#map-info').getBoundingClientRect();
+      const pin = [...document.querySelectorAll('.ps-pin')].map(e => e.getBoundingClientRect());
+      return pin.length === 9 && pin.every(p => p.width >= 22 && p.left >= w.left - 1 && p.right <= w.right + 1 && p.top >= w.top - 1 && p.bottom <= w.bottom + 1)
+        && info.right <= innerWidth + 1 && info.bottom <= innerHeight + 1 && !!document.querySelector('#pi-play');
+    })()`));
+    if (w === 844 || w === 568 || w === 1024) await shot(`11-mendatar-${w}x${h}-peta`);
     await ev(`document.querySelector('#dlg-map').close()`);
     const masalah = [];
     for (let i = 0; i < 9; i++) {

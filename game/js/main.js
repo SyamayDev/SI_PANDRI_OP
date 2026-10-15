@@ -10,6 +10,14 @@
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const D = window.DATA, el = G.el, esc = G.esc;
 
+  // Ikon pixel pada tombol (lihat ikon.js)
+  function pasangIkon(e, nama) {
+    if (!e || (e.dataset.ikon === nama && e.firstChild)) return;
+    e.dataset.ikon = nama;
+    e.innerHTML = window.IKON(nama);
+  }
+  $$('[data-ikon]').forEach(e => pasangIkon(e, e.dataset.ikon));
+
   G.load();
   applySettings();
   G.start();
@@ -24,8 +32,9 @@
     snd.setAttribute('aria-pressed', String(!!s.sound));
     snd.querySelector('.lbl').textContent = s.sound ? 'Suara' : 'Bisu';
     snd.classList.toggle('off', !s.sound);
+    pasangIkon(snd.querySelector('.ico'), s.sound ? 'suara' : 'bisu');
     const ts = $('#tc-sound');
-    if (ts) { ts.classList.toggle('off', !s.sound); ts.setAttribute('aria-pressed', String(!!s.sound)); }
+    if (ts) { ts.classList.toggle('off', !s.sound); ts.setAttribute('aria-pressed', String(!!s.sound)); pasangIkon(ts.querySelector('[data-ikon]'), s.sound ? 'suara' : 'bisu'); }
     const sp = $('#pb-speed');
     if (sp) sp.value = s.speed;
   }
@@ -161,10 +170,13 @@
       $('#continue-detail').textContent = selesai === D.ACTS.length ? 'Semua babak selesai · mulai dari Babak 1'
         : `Babak ${c.act + 1}${c.part ? ' · bagian ' + (c.part + 1) : ''} · ${D.ACTS[c.act].title}`;
       $('#start-label').textContent = 'Mulai dari Awal';
+      pasangIkon($('#btn-start .gm-ikon'), 'awal');
+      pasangIkon($('#btn-continue .gm-ikon'), selesai === D.ACTS.length ? 'main' : 'lanjut');
       $('#title-progress').textContent = `Progres tersimpan: ${selesai} dari ${D.ACTS.length} babak selesai · ${G.save.xp} XP`;
     } else {
       cont.hidden = true;
       $('#start-label').textContent = 'Mulai Cerita';
+      pasangIkon($('#btn-start .gm-ikon'), 'main');
       $('#title-progress').textContent = '';
     }
     updateHud();
@@ -266,45 +278,9 @@
     });
   }
 
-  /* ---------------- Peta babak ---------------- */
-  function openMap() {
-    const list = $('#map-list');
-    list.innerHTML = '';
-    $('#map-note').textContent = G.mode === 'presenter'
-      ? 'Mode Presenter: semua babak terbuka. Lompatan di sini adalah navigasi presenter, bukan penyelesaian misi, dan tidak mengubah save Mode Cerita.'
-      : 'Mode Cerita: babak berikutnya terbuka setelah misi babak sebelumnya selesai. Babak yang sudah terbuka dapat diulang.';
-    const LABEL = { selesai: 'Selesai', berjalan: 'Sedang dimainkan', tersedia: 'Tersedia', terkunci: 'Terkunci' };
-    window.ACTS.forEach((a, i) => {
-      const st = G.actStatus(i);
-      const li = el('li', 'map-item ' + st);
-      li.innerHTML = `<div class="map-head"><span class="map-no">${i + 1}</span><div><h3>${esc(a.title)}</h3><p>${esc(a.goal)}</p></div><span class="badge st-${st}">${LABEL[st]}</span></div>`;
-      const row = el('div', 'btn-row');
-      if (st === 'terkunci') {
-        row.appendChild(el('span', 'muted', `Selesaikan Babak ${i} untuk membuka.`));
-      } else {
-        const lanjut = G.mode === 'story' && st === 'berjalan' && G.prog.current.part > 0;
-        const b = el('button', 'btn btn-primary', lanjut ? `Lanjutkan (bagian ${G.prog.current.part + 1})` : st === 'selesai' ? 'Ulangi babak' : 'Mainkan');
-        b.addEventListener('click', () => jumpTo(i, lanjut ? G.prog.current.part : 0));
-        row.appendChild(b);
-        if (lanjut) {
-          const b0 = el('button', 'btn', 'Dari awal babak');
-          b0.addEventListener('click', () => jumpTo(i, 0));
-          row.appendChild(b0);
-        }
-        if (G.mode === 'presenter' && a.parts.length > 1) {
-          a.partNames.forEach((nm, p) => {
-            if (p === 0) return;
-            const bp = el('button', 'btn btn-small', `${p + 1}. ${esc(nm)}`);
-            bp.addEventListener('click', () => jumpTo(i, p));
-            row.appendChild(bp);
-          });
-        }
-      }
-      li.appendChild(row);
-      list.appendChild(li);
-    });
-    openDialog('dlg-map');
-  }
+  /* ---------------- Peta babak (lihat peta.js) ---------------- */
+  function openMap() { window.PETA.buka(); }
+  G.jumpTo = jumpTo;
   $('#btn-map').addEventListener('click', openMap);
 
   /* ---------------- Jurnal, XP, achievement ---------------- */

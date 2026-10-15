@@ -162,15 +162,26 @@
   function drawBody(ctx, c, pose) {
     const skin = c.kind === 'human' ? c.skin : c.fur;
     const skinS = c.kind === 'human' ? c.skinS : c.furS;
+    // Pose jalan (peta babak): 'jalan1' kaki kiri melangkah, 'jalan2' kaki kanan melangkah.
+    // Kaki yang terangkat digambar lebih tinggi; lengan berayun berlawanan dengan kaki.
+    const langkah = pose === 'jalan1' ? 1 : pose === 'jalan2' ? -1 : 0;
     // Kaki / rok
     if (c.skirt) {
       rect(ctx, 15, 52, 18, 8, c.skirt);
       rect(ctx, 29, 52, 4, 8, mix(c.skirt, '#000000', 0.2));
-      sym(ctx, 17, 60, 6, 3, c.shoe);
+      if (!langkah) sym(ctx, 17, 60, 6, 3, c.shoe);
+      else {
+        rect(ctx, 17, langkah > 0 ? 60 : 58, 6, 3, c.shoe);
+        rect(ctx, 25, langkah > 0 ? 58 : 60, 6, 3, c.shoe);
+      }
     } else {
       sym(ctx, 17, 53, 6, 7, c.pants);
       rect(ctx, 25, 53, 2, 7, mix(c.pants, '#000000', 0.25));
-      sym(ctx, 16, 59, 7, 4, c.shoe);
+      if (!langkah) sym(ctx, 16, 59, 7, 4, c.shoe);
+      else {
+        rect(ctx, 16, langkah > 0 ? 59 : 57, 7, 4, c.shoe);
+        rect(ctx, 25, langkah > 0 ? 57 : 59, 7, 4, c.shoe);
+      }
     }
     // Badan
     ell(ctx, 24, 38, c.big ? 12 : 11, 5, c.top);
@@ -208,6 +219,13 @@
       rect(ctx, 34, 37, 4, 8, c.topS);
       sym(ctx, 13, 43, 7, 4, c.top);
       ell(ctx, 20.5, 46, 2.6, 2.3, skin); ell(ctx, 27.5, 46, 2.6, 2.3, skin);
+    } else if (langkah) {
+      // lengan yang berayun ke depan tampak lebih pendek
+      const kiri = langkah < 0 ? 11 : 13, kanan = langkah > 0 ? 11 : 13;
+      rect(ctx, 10, 37, 4, kiri, c.top);
+      rect(ctx, 34, 37, 4, kanan, c.topS);
+      ell(ctx, 12, 37 + kiri + 1, 2.6, 2.4, skin);
+      ell(ctx, 36, 37 + kanan + 1, 2.6, 2.4, skin);
     } else {
       rect(ctx, 10, 37, 4, 13, c.top);
       if (pose === 'wave') {
