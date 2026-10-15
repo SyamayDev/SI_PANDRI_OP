@@ -85,24 +85,39 @@
     if (!fsAktif()) masukLayarPenuh();
     else (document.exitFullscreen || document.webkitExitFullscreen).call(document);
   }
+  // HP/tablet: game hanya dimainkan mendatar. Kunci rotasi hanya diizinkan browser saat
+  // layar penuh (Android Chrome); di iPhone tidak didukung, jadi muncul layar "Putar perangkatmu".
+  const layarSentuh = () => !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
+  const kunciDidukung = () => !!(screen.orientation && typeof screen.orientation.lock === 'function');
+  function kunciMendatar() {
+    if (!layarSentuh() || !kunciDidukung()) return;
+    try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* tidak didukung */ }
+  }
   function syncFull() {
     const on = fsAktif();
     $('#tc-full').setAttribute('aria-pressed', String(on));
     $('#tc-full').title = on ? 'Keluar layar penuh' : 'Layar penuh';
     $('#btn-full .lbl').textContent = on ? 'Keluar' : 'Penuh';
     document.body.classList.toggle('is-fullscreen', on);
+    if (on) kunciMendatar();
   }
   document.addEventListener('fullscreenchange', syncFull);
   document.addEventListener('webkitfullscreenchange', syncFull);
 
+  const bisaPutarOtomatis = fsDidukung() && kunciDidukung();
+  $('#rotate-btn').hidden = !bisaPutarOtomatis;
+  $('#rotate-btn').addEventListener('click', () => { if (fsAktif()) kunciMendatar(); else masukLayarPenuh(); });
+  if (!bisaPutarOtomatis) $('#sp-rotate-text').textContent = 'Game ini dimainkan mendatar. Putar perangkatmu ke posisi landscape.';
+
   /* ---------------- Layar mulai ---------------- */
   const splash = $('#splash');
-  if (!fsDidukung()) $('#sp-note').textContent = 'Tip: tambahkan ke Layar Utama agar tampil layar penuh';
-  else if (!G.settings.autoFull) $('#sp-note').textContent = 'Tekan F atau tombol ⛶ untuk layar penuh';
+  const spNote = $('#sp-note');
+  if (spNote && !fsDidukung()) spNote.textContent = 'Tip: tambahkan ke Layar Utama agar tampil layar penuh';
+  else if (spNote && !G.settings.autoFull) spNote.textContent = 'Tekan F atau tombol ⛶ untuk layar penuh';
   if (window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches) $('#sp-press-text').textContent = 'Klik atau tekan tombol apa saja untuk mulai';
   function tutupSplash() {
     if (splash.hidden || splash.classList.contains('gone')) return;
-    if (G.settings.autoFull) masukLayarPenuh();
+    if (G.settings.autoFull) masukLayarPenuh(); // di HP sekaligus mengunci posisi mendatar (lihat syncFull)
     G.sfx.open();
     splash.classList.add('gone');
     document.body.classList.remove('splash-on');

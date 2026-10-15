@@ -50,7 +50,7 @@ async function main() {
   const port = 9300 + Math.floor(Math.random() * 500);
   const proc = spawn(chrome, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
     '--allow-file-access-from-files', `--remote-debugging-port=${port}`, `--user-data-dir=${profil}`, 'about:blank'], { stdio: 'ignore' });
-  const batas = setTimeout(() => { console.log('  GAGAL  Batas waktu uji (7 menit) habis'); proc.kill(); process.exit(1); }, 420000);
+  const batas = setTimeout(() => { console.log('  GAGAL  Batas waktu uji (15 menit) habis'); proc.kill(); process.exit(1); }, 900000);
   batas.unref();
 
   let target = null;
@@ -338,6 +338,13 @@ async function main() {
     await mainkanSampai(`!!(G.cur && G.cur.api && document.querySelector('.pick-grid'))`, 300);
     await sleep(150);
     cek(`Panel misi & dialog muat di ${w}×${h}`, await noOverflow() && await ev(`(() => { const a = document.querySelector('#activity').getBoundingClientRect(), d = document.querySelector('#dialog').getBoundingClientRect(); return a.right <= innerWidth + 1 && a.left >= -1 && d.right <= innerWidth + 1 && a.bottom <= d.top + 2; })()`));
+    // Teks narator mendapat lebar yang sama dengan teks tokoh (dulu terjepit di samping tombol)
+    const lebarTeks = async () => ev(`(() => { const d = document.querySelector('#dialog'), t = document.querySelector('#dlg-text'); return t.getBoundingClientRect().width / d.clientWidth; })()`);
+    const rTokoh = await lebarTeks();
+    await ev(`document.querySelector('#dialog').classList.add('narrator')`);
+    const rNarator = await lebarTeks();
+    await ev(`document.querySelector('#dialog').classList.remove('narrator')`);
+    cek(`Teks narator selebar teks tokoh di ${w}×${h}`, rNarator >= rTokoh - 0.02 && rNarator > 0.5, `narator ${rNarator.toFixed(2)}, tokoh ${rTokoh.toFixed(2)}`);
     await shot(`10-misi-${w}x${h}`);
     await ev(`document.querySelector('#hud-home').click()`);
     await sleep(100);
@@ -368,26 +375,57 @@ async function main() {
   }
   console.log('        kartu nota tampil di: ' + (notaTampilDi.join(', ') || '(tidak ada)'));
 
-  // 8b. Handphone: setiap babak dan setiap bagian harus muat di layar HP (tegak & mendatar)
-  const HP = [[390, 844, 'tegak'], [844, 390, 'mendatar']];
+  // 8b. HP & tablet: hanya mode mendatar. Posisi tegak menampilkan layar "Putar perangkatmu";
+  //     di setiap ukuran mendatar, setiap babak dan setiap bagian harus muat di layar.
+  await viewport(390, 844, true);
+  await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+  await sleep(250);
+  cek('HP tegak 390×844: layar "Putar perangkatmu" menutup seluruh layar', await ev(`(() => {
+      const r = document.querySelector('#rotate'), b = r.getBoundingClientRect();
+      return getComputedStyle(r).display !== 'none' && b.width >= innerWidth - 1 && b.height >= innerHeight - 1
+        && document.elementFromPoint(innerWidth / 2, innerHeight / 2).closest('#rotate') !== null;
+    })()`));
+  await shot('11-hp-tegak-putar');
+  cek('HP tegak: layar mulai tetap bisa diketuk (layar putar tidak menutupinya)', await ev(`(() => {
+      document.body.classList.add('splash-on');
+      const tertutup = getComputedStyle(document.querySelector('#rotate')).display !== 'none';
+      const petunjuk = getComputedStyle(document.querySelector('.sp-rotate')).display !== 'none';
+      document.body.classList.remove('splash-on');
+      return !tertutup && petunjuk;
+    })()`));
+  await viewport(1600, 900);
+  cek('Desktop: layar putar tidak muncul walau jendela sempit/tegak', await (async () => {
+    await send('Emulation.setTouchEmulationEnabled', { enabled: false });
+    await viewport(700, 900);
+    await sleep(150);
+    const r = await ev(`getComputedStyle(document.querySelector('#rotate')).display === 'none'`);
+    await viewport(1600, 900);
+    return r;
+  })());
+
+  const HP = [[568, 320, 'HP kecil'], [667, 375, 'HP'], [740, 360, 'HP'], [844, 390, 'HP'], [932, 430, 'HP besar'], [1024, 768, 'tablet'], [1180, 820, 'tablet']];
+  // panel misi dan dialog tidak boleh saling menutupi, keduanya di dalam layar, tanpa gulir horizontal
   const muatPanel = `(() => {
       const act = document.querySelector('#activity'), dl = document.querySelector('#dialog');
       if (act.hidden) return 'ok';
       const a = act.getBoundingClientRect(), d = dl.getBoundingClientRect();
-      const ok = a.left >= -1 && a.right <= innerWidth + 1 && d.left >= -1 && d.right <= innerWidth + 1 && a.bottom <= d.top + 2
+      const tumpuk = !dl.hidden && a.left < d.right - 2 && d.left < a.right - 2 && a.top < d.bottom - 2 && d.top < a.bottom - 2;
+      const ok = a.left >= -1 && a.right <= innerWidth + 1 && d.left >= -1 && d.right <= innerWidth + 1 && d.bottom <= innerHeight + 1 && !tumpuk
         && a.height >= 110 && act.scrollWidth <= act.clientWidth + 1 && document.documentElement.scrollWidth <= innerWidth + 1;
-      return ok ? 'ok' : JSON.stringify({ act: [Math.round(a.left), Math.round(a.right), Math.round(a.top), Math.round(a.bottom)], dlgTop: Math.round(d.top), sw: act.scrollWidth, cw: act.clientWidth });
+      return ok ? 'ok' : JSON.stringify({ act: [Math.round(a.left), Math.round(a.right), Math.round(a.top), Math.round(a.bottom)], dlg: [Math.round(d.left), Math.round(d.top)], tumpuk, sw: act.scrollWidth, cw: act.clientWidth });
     })()`;
-  for (const [w, h, arah] of HP) {
+  for (const [w, h, jenis] of HP) {
     await viewport(w, h, true);
     await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
     await sleep(250);
-    cek(`HP ${arah} ${w}×${h}: menu utama tanpa overflow dan tidak bertumpuk dengan tokoh`, await noOverflow() && await ev(`(() => {
-      const p = document.querySelector('.title-panel').getBoundingClientRect(), c = document.querySelector('#title-cast').getBoundingClientRect();
-      const tumpang = !(c.top >= p.bottom - 2 || c.left >= p.right - 2);
-      return p.right <= innerWidth + 1 && p.bottom <= innerHeight + 1 && !tumpang;
+    cek(`${jenis} mendatar ${w}×${h}: menu utama muat, tidak bertumpuk dengan tokoh, tanpa layar putar`, await noOverflow() && await ev(`(() => {
+      const p = document.querySelector('.title-panel').getBoundingClientRect();
+      const tokoh = [...document.querySelectorAll('.title-char')].map(f => f.getBoundingClientRect());
+      const tumpang = tokoh.some(c => c.left < p.right - 2 && p.left < c.right - 2 && c.top < p.bottom - 2 && p.top < c.bottom - 2);
+      return p.right <= innerWidth + 1 && p.bottom <= innerHeight + 1 && !tumpang
+        && getComputedStyle(document.querySelector('#rotate')).display === 'none';
     })()`));
-    await shot(`11-hp-${arah}-menu`);
+    await shot(`11-mendatar-${w}x${h}-menu`);
     await ev(`document.querySelector('#btn-presenter-start').click()`);
     await tunggu(`G.mode === 'presenter'`);
     await ev(`document.querySelector('#dlg-map').close()`);
@@ -401,10 +439,10 @@ async function main() {
         await sleep(120);
         const r = await ev(muatPanel);
         if (r !== 'ok') masalah.push(`B${i + 1}.${p + 1} ${r}`);
-        if (p === 0 || i === 4) await shot(`12-hp-${arah}-b${i + 1}-${p + 1}`);
+        if ((w === 844 || w === 568 || w === 1024) && (p === 0 || i === 4)) await shot(`12-mendatar-${w}x${h}-b${i + 1}-${p + 1}`);
       }
     }
-    cek(`HP ${arah} ${w}×${h}: panel misi semua babak & bagian muat di layar`, masalah.length === 0, masalah.slice(0, 4).join(' | '));
+    cek(`${jenis} mendatar ${w}×${h}: panel misi semua babak & bagian muat, tidak menutupi dialog`, masalah.length === 0, masalah.slice(0, 4).join(' | '));
     await ev(`document.querySelector('#pb-exit').click()`);
     await tunggu(`G.mode === 'story'`);
     await send('Emulation.setTouchEmulationEnabled', { enabled: false });

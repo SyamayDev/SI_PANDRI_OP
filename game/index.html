@@ -107,8 +107,17 @@
     <span class="sp-logo">SI-PANDRI</span>
     <span class="sp-sub">Misi Laundry Beres!</span>
     <span class="sp-press"><span class="sp-arrow">▶</span> <span id="sp-press-text">Ketuk layar untuk mulai</span></span>
-
+    <span class="sp-rotate"><span class="rot-phone" aria-hidden="true"></span><span id="sp-rotate-text">Game ini dimainkan mendatar. Setelah diketuk, layar diputar otomatis.</span></span>
   </button>
+
+  <!-- HP/tablet dipegang tegak: game hanya dimainkan mendatar -->
+  <div id="rotate" role="alertdialog" aria-labelledby="rotate-h" aria-describedby="rotate-p">
+    <div class="rot-phone" aria-hidden="true"></div>
+    <h2 id="rotate-h">Putar perangkatmu</h2>
+    <p id="rotate-p">SI-PANDRI: Misi Laundry Beres! dimainkan dalam posisi <b>mendatar</b> (landscape).</p>
+    <button id="rotate-btn" class="btn btn-primary btn-big" type="button" hidden>Layar penuh &amp; putar otomatis</button>
+    <p class="rot-note" id="rotate-note">Kalau tampilan tidak ikut berputar, matikan kunci rotasi layar di HP.</p>
+  </div>
 
   <!-- Layar judul / menu utama -->
   <section id="title-screen" aria-labelledby="title-h">

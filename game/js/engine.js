@@ -509,8 +509,8 @@
       });
       wrap.append(colL, colR);
       box.append(G.el('p', 'hint', 'Klik satu kartu di kiri, lalu klik pasangannya di kanan.'), wrap, status);
-      // Di HP kolom kanan berada di bawah kolom kiri: gulir otomatis agar tidak perlu mencari
-      const sempit = () => window.matchMedia('(max-width: 720px)').matches;
+      // Panel sempit: kolom kanan berada di bawah kolom kiri, jadi gulir otomatis agar tidak perlu mencari
+      const sempit = () => colR.offsetTop > colL.offsetTop + 4;
       function chooseL(id) {
         if (!api.alive() || bL[id].classList.contains('is-right')) return;
         Object.values(bL).forEach(b => b.classList.remove('is-selected'));
@@ -684,7 +684,7 @@
     G.persist();
     const a = D.ACHIEVEMENTS[id];
     G.sfx.fanfare();
-    G.toast(`🏅 Achievement: **${a.title}** — ${a.desc}`, 'achv', 4200);
+    G.toast(`🏅 Achievement: **${a.title}** — ${a.desc}${G.mode === 'presenter' ? ' (presenter, tidak disimpan)' : ''}`, 'achv', 4200);
     G.emit('xp');
   };
   G.note = function (actId, lines) {
