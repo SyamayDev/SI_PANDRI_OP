@@ -38,9 +38,31 @@ ALUR DEMO YANG DISARANKAN
 8. Setelah cucian diserahkan, ubah status menjadi Selesai/Diserahkan.
 9. Buka Laporan Transaksi untuk melihat ringkasan.
 
+ATURAN TRANSAKSI (VERSI PENYEMPURNAAN)
+- Berat aktual harus 0,01 - 500 kg; nol, negatif, dan teks ditolak lalu diminta ulang.
+- Pesanan yang sudah ditimbang hanya dapat ditimbang ulang setelah konfirmasi Y.
+  Pesanan yang sudah Lunas tidak dapat ditimbang ulang.
+- Status pembayaran hanya bisa ditandai Lunas setelah cucian ditimbang dan admin
+  menjawab Y pada pertanyaan "Sudah diverifikasi?".
+- Status cucian hanya boleh maju satu tahap (Menunggu Diproses > Sedang Diproses >
+  Siap Diambil > Selesai/Diserahkan). Koreksi mundur boleh, dengan peringatan.
+- Mengubah tarif tidak mengubah total pesanan yang sudah ditimbang.
+- Pesan [OK] berwarna hijau, [!] kuning, [X] merah jika terminal mendukung warna.
+
+PENGUJIAN OTOMATIS
+Jika Node.js 22+ tersedia, jalankan dari folder proyek:
+       node tests/uji_pascal.js
+Skrip mengompilasi SI_PANDRI.pas dan menjalankan 14 skenario di folder sementara,
+sehingga file .dat di folder proyek tidak tersentuh.
+
+GAME PRESENTASI
+Media presentasi "SI-PANDRI: Misi Laundry Beres!" ada di folder game/ (buka
+game/index.html). Game adalah simulasi terpisah dan tidak membaca/mengubah file .dat.
+Lihat README.md untuk penjelasan lengkap.
+
 PENERAPAN MATERI UTS
 - Input/output: write, writeln, read, readln.
-- Percabangan: if-then-else dan case-of.
+- Percabangan: if-then-else, nested-if, dan case-of.
 - Perulangan: repeat-until, while-do, for-to-do.
 - break: menghentikan pencarian saat pesanan/pelanggan ditemukan.
 - File handling: data pelanggan, pesanan, dan pengaturan disimpan dalam file lokal.

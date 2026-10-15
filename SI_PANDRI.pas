@@ -3,7 +3,7 @@ program SI_PANDRI;
 {$mode objfpc}{$H+}
 
 uses
-  SysUtils;
+  SysUtils{$IFDEF WINDOWS}, Windows{$ENDIF};
 
 const
   FILE_PELANGGAN  = 'pandri_pelanggan.dat';
@@ -20,12 +20,22 @@ const
   STATUS_SELESAI          = 'Selesai/Diserahkan';
   BAYAR_BELUM             = 'Belum Dibayar';
   BAYAR_LUNAS             = 'Lunas';
-  
+
   { FIX: Menambahkan konstanta untuk menghindari magic strings }
   METODE_TUNAI    = 'Tunai';
   METODE_TRANSFER = 'Transfer';
   LAYANAN_REGULER = 'Reguler';
   LAYANAN_EXPRESS = 'Express';
+
+  { Kode warna ANSI untuk terminal: navy/biru, cyan, putih, hijau, kuning, merah }
+  WARNA_NORMAL     = #27'[0m';
+  WARNA_JUDUL      = #27'[1;96m';
+  WARNA_BANNER     = #27'[1;97;44m';
+  WARNA_SUKSES     = #27'[92m';
+  WARNA_PERINGATAN = #27'[93m';
+  WARNA_ERROR      = #27'[91m';
+
+  LEBAR_LAYAR = 70;
 
 type
   TPelanggan = record
@@ -68,18 +78,107 @@ type
 var
   Pengaturan: TPengaturan;
   FormatIndonesia: TFormatSettings;
+  WarnaAktif: Boolean;
+
+{ ===================== TAMPILAN TERMINAL ===================== }
+
+{ Warna hanya dipakai jika terminal mendukung kode ANSI.
+  Jika output dialihkan ke file, warna dimatikan agar teks tetap bersih. }
+procedure AktifkanWarnaTerminal;
+{$IFDEF WINDOWS}
+var
+  hOut: THandle;
+  mode: DWORD;
+{$ENDIF}
+begin
+  {$IFDEF WINDOWS}
+  WarnaAktif := False;
+  hOut := GetStdHandle(STD_OUTPUT_HANDLE);
+  if GetConsoleMode(hOut, mode) then
+    WarnaAktif := SetConsoleMode(hOut, mode or $0004); { ENABLE_VIRTUAL_TERMINAL_PROCESSING }
+  {$ELSE}
+  WarnaAktif := True;
+  {$ENDIF}
+end;
+
+procedure Warna(const kode: string);
+begin
+  if WarnaAktif then
+    Write(kode);
+end;
 
 procedure Garis;
 begin
   Writeln('======================================================================');
 end;
 
+procedure GarisTipis;
+begin
+  Writeln('----------------------------------------------------------------------');
+end;
+
 procedure Judul(const teks: string);
 begin
   Writeln;
+  Warna(WARNA_JUDUL);
   Garis;
   Writeln('  ', teks);
   Garis;
+  Warna(WARNA_NORMAL);
+end;
+
+procedure SubJudul(const teks: string);
+begin
+  Warna(WARNA_JUDUL);
+  Writeln('[ ', teks, ' ]');
+  Warna(WARNA_NORMAL);
+end;
+
+procedure PesanSukses(const teks: string);
+begin
+  Warna(WARNA_SUKSES);
+  Writeln('[OK] ', teks);
+  Warna(WARNA_NORMAL);
+end;
+
+procedure PesanPeringatan(const teks: string);
+begin
+  Warna(WARNA_PERINGATAN);
+  Writeln('[!]  ', teks);
+  Warna(WARNA_NORMAL);
+end;
+
+procedure PesanError(const teks: string);
+begin
+  Warna(WARNA_ERROR);
+  Writeln('[X]  ', teks);
+  Warna(WARNA_NORMAL);
+end;
+
+{ Membuat satu baris bingkai dengan teks di tengah. }
+function BarisTengah(const teks: string): string;
+var
+  kiri, kanan: Integer;
+begin
+  kiri := (LEBAR_LAYAR - 2 - Length(teks)) div 2;
+  kanan := LEBAR_LAYAR - 2 - Length(teks) - kiri;
+  Result := '|' + StringOfChar(' ', kiri) + teks + StringOfChar(' ', kanan) + '|';
+end;
+
+procedure TampilkanBanner;
+var
+  bingkai: string;
+begin
+  bingkai := '+' + StringOfChar('-', LEBAR_LAYAR - 2) + '+';
+  Writeln;
+  Warna(WARNA_BANNER);
+  Write(bingkai); Warna(WARNA_NORMAL); Writeln; Warna(WARNA_BANNER);
+  Write(BarisTengah('S I - P A N D R I')); Warna(WARNA_NORMAL); Writeln; Warna(WARNA_BANNER);
+  Write(BarisTengah('Sistem Pengelolaan Parfait Laundry')); Warna(WARNA_NORMAL); Writeln; Warna(WARNA_BANNER);
+  Write(BarisTengah('Laundry Lebih Mudah, Lebih Teratur.')); Warna(WARNA_NORMAL); Writeln; Warna(WARNA_BANNER);
+  Write(bingkai);
+  Warna(WARNA_NORMAL);
+  Writeln;
 end;
 
 procedure Jeda;
@@ -87,10 +186,14 @@ var
   tombol: Char;
 begin
   Writeln;
-  Write('Tekan satu karakter lalu ENTER untuk melanjutkan... ');
+  Write('Tekan ENTER untuk melanjutkan... ');
   Read(tombol);
-  Readln;
+  { Di terminal yang hanya mengirim LF, ENTER kosong sudah habis dibaca oleh Read. }
+  if tombol <> #10 then
+    Readln;
 end;
+
+{ ===================== INPUT DAN VALIDASI ===================== }
 
 function BacaTeks(const prompt: string): string;
 var
@@ -118,12 +221,13 @@ begin
     begin
       if (angka < nilaiMin) or (angka > nilaiMaks) then
       begin
-        Writeln('Pilihan harus berada di antara ', nilaiMin, ' dan ', nilaiMaks, '.');
+        PesanError('Pilihan harus berada di antara ' + IntToStr(nilaiMin) + ' dan ' +
+          IntToStr(nilaiMaks) + '.');
         valid := False;
       end;
     end
     else
-      Writeln('Input harus berupa angka bulat. Coba lagi.');
+      PesanError('Input harus berupa angka bulat. Coba lagi.');
   end;
   Result := angka;
 end;
@@ -150,12 +254,13 @@ begin
     begin
       if (angka < nilaiMin) or (angka > nilaiMaks) then
       begin
-        Writeln('Nilai harus antara ', nilaiMin:0:2, ' dan ', nilaiMaks:0:2, '.');
+        PesanError('Nilai harus antara ' + FormatFloat('0.##', nilaiMin, FormatIndonesia) +
+          ' dan ' + FormatFloat('0.##', nilaiMaks, FormatIndonesia) + '.');
         valid := False;
       end;
     end
     else
-      Writeln('Input angka tidak valid. Gunakan titik atau koma untuk desimal.');
+      PesanError('Input angka tidak valid. Gunakan titik atau koma untuk desimal.');
   end;
   Result := angka;
 end;
@@ -165,11 +270,17 @@ begin
   Result := 'Rp ' + FormatFloat('#,##0', nilai, FormatIndonesia);
 end;
 
+function TeksBerat(berat: Real): string;
+begin
+  Result := FormatFloat('0.##', berat, FormatIndonesia) + ' kg';
+end;
+
 function TanggalSekarang: string;
 begin
   Result := FormatDateTime('dd/mm/yyyy hh:nn', Now);
 end;
 
+{ Mengubah nomor seperti 0812-3456-7890 menjadi 6281234567890 (format wa.me). }
 function NormalisasiNomorWA(const nomor: string): string;
 var
   i: Integer;
@@ -197,6 +308,7 @@ begin
   Result := digit;
 end;
 
+{ Huruf/angka dibiarkan; spasi dan simbol diubah ke kode %XX agar aman di URL. }
 function EncodeURL(const teks: string): string;
 var
   i: Integer;
@@ -223,10 +335,10 @@ end;
 procedure TampilkanLinkWhatsApp(const nomor, pesan: string);
 begin
   Writeln;
-  Writeln('Pesan sudah disiapkan. Buka atau salin tautan berikut ke browser:');
+  PesanSukses('Pesan sudah disiapkan. Buka atau salin tautan berikut ke browser:');
   Writeln(LinkWhatsApp(nomor, pesan));
   Writeln;
-  Writeln('Catatan: pesan belum terkirim otomatis. Periksa chat, lalu tekan tombol Kirim di WhatsApp.');
+  PesanPeringatan('Pesan belum terkirim otomatis. Periksa chat, lalu tekan tombol Kirim di WhatsApp.');
 end;
 
 function PilihLayanan: string;
@@ -261,6 +373,8 @@ begin
   end;
 end;
 
+{ ===================== OPERASI FILE ===================== }
+
 procedure SimpanPengaturan;
 var
   f: TFilePengaturan;
@@ -274,18 +388,23 @@ begin
   end;
 end;
 
+procedure IsiPengaturanBawaan;
+begin
+  Pengaturan.hargaReguler := 6000;
+  Pengaturan.hargaExpress := 10000;
+  Pengaturan.nomorWAAdmin := '6281234567890';
+  Pengaturan.namaBank := 'BCA';
+  Pengaturan.nomorRekening := '1234567890';
+  Pengaturan.pemilikRekening := 'Parfait Laundry';
+end;
+
 procedure MuatPengaturan;
 var
   f: TFilePengaturan;
 begin
   if not FileExists(FILE_PENGATURAN) then
   begin
-    Pengaturan.hargaReguler := 6000;
-    Pengaturan.hargaExpress := 10000;
-    Pengaturan.nomorWAAdmin := '6281234567890';
-    Pengaturan.namaBank := 'BCA';
-    Pengaturan.nomorRekening := '1234567890';
-    Pengaturan.pemilikRekening := 'Parfait Laundry';
+    IsiPengaturanBawaan;
     SimpanPengaturan;
   end
   else
@@ -296,14 +415,7 @@ begin
       if FileSize(f) > 0 then
         Read(f, Pengaturan)
       else
-      begin
-        Pengaturan.hargaReguler := 6000;
-        Pengaturan.hargaExpress := 10000;
-        Pengaturan.nomorWAAdmin := '6281234567890';
-        Pengaturan.namaBank := 'BCA';
-        Pengaturan.nomorRekening := '1234567890';
-        Pengaturan.pemilikRekening := 'Parfait Laundry';
-      end;
+        IsiPengaturanBawaan;
     finally
       CloseFile(f);
     end;
@@ -360,6 +472,8 @@ begin
   end;
 end;
 
+{ ID dibuat dari jumlah data + 1, misalnya data ke-3 menjadi PD00003.
+  Aman karena program tidak menghapus pesanan dari file. }
 function BuatIDPelanggan: string;
 begin
   Result := Format('PL%.4d', [JumlahPelanggan + 1]);
@@ -398,6 +512,7 @@ begin
   end;
 end;
 
+{ Menimpa satu record pesanan pada posisinya (posisi didapat dari CariPesananID). }
 procedure SimpanPerubahanPesanan(posisi: LongInt; const pesanan: TPesanan);
 var
   f: TFilePesanan;
@@ -415,6 +530,7 @@ begin
   end;
 end;
 
+{ Pencarian berurutan: baca record satu per satu, berhenti (Break) saat cocok. }
 function CariPelangganUsername(const username: string; var hasil: TPelanggan;
   var posisi: LongInt): Boolean;
 var
@@ -477,16 +593,20 @@ begin
   end;
 end;
 
+{ ===================== TAMPILAN DATA PESANAN ===================== }
+
 procedure TampilkanDetailPesanan(const p: TPesanan);
 begin
   Garis;
   Writeln('ID Pesanan       : ', p.idPesanan);
+  SubJudul('Pelanggan');
   Writeln('Nama Pelanggan   : ', p.namaPelanggan);
   Writeln('Nomor WhatsApp   : ', p.nomorWA);
+  SubJudul('Layanan, Berat, dan Biaya');
   Writeln('Layanan          : ', p.layanan);
   if p.sudahDitimbang then
   begin
-    Writeln('Berat Aktual     : ', FormatFloat('0.##', p.beratKg, FormatIndonesia), ' kg');
+    Writeln('Berat Aktual     : ', TeksBerat(p.beratKg));
     Writeln('Total Biaya      : ', Rupiah(p.totalBiaya));
   end
   else
@@ -494,40 +614,45 @@ begin
     Writeln('Berat Aktual     : Belum ditimbang oleh admin');
     Writeln('Total Biaya      : Menunggu hasil penimbangan');
   end;
+  SubJudul('Pembayaran');
   Writeln('Metode Pembayaran: ', p.metodeBayar);
   Writeln('Status Pembayaran: ', p.statusBayar);
+  SubJudul('Status dan Waktu');
   Writeln('Status Cucian    : ', p.statusCucian);
   Writeln('Tanggal Masuk    : ', p.tanggalMasuk);
   Writeln('Terakhir Diubah  : ', p.tanggalUpdate);
   Garis;
 end;
 
-function StatusPendek(const status: string): string;
+{ Urutan tahap cucian: 0 Menunggu Ditimbang ... 4 Selesai/Diserahkan. }
+function IndeksStatus(const status: string): Integer;
 begin
   if status = STATUS_MENUNGGU_TIMBANG then
-    Result := 'Menunggu Ditimbang'
+    Result := 0
   else if status = STATUS_MENUNGGU_PROSES then
-    Result := 'Menunggu Diproses'
+    Result := 1
   else if status = STATUS_PROSES then
-    Result := 'Sedang Diproses'
+    Result := 2
   else if status = STATUS_SIAP then
-    Result := 'Siap Diambil'
+    Result := 3
   else if status = STATUS_SELESAI then
-    Result := 'Selesai/Diserahkan'
+    Result := 4
   else
-    Result := status;
+    Result := -1;
 end;
+
+{ ===================== LOGIN DAN AKUN ===================== }
 
 function LoginAdmin: Boolean;
 var
   percobaan: Integer;
   username, password: string;
 begin
+  Judul('LOGIN ADMIN');
   percobaan := 0;
   Result := False;
   while (percobaan < 3) and (not Result) do
   begin
-    Writeln;
     username := BacaTeks('Username admin: ');
     password := BacaTeks('Password admin: ');
     if (username = USER_ADMIN) and (password = PASS_ADMIN) then
@@ -535,13 +660,13 @@ begin
     else
     begin
       Inc(percobaan);
-      Writeln('Username atau password salah. Percobaan ', percobaan, ' dari 3.');
+      PesanError('Username atau password salah. Percobaan ' + IntToStr(percobaan) + ' dari 3.');
     end;
   end;
   if Result then
-    Writeln('Login admin berhasil.')
+    PesanSukses('Login admin berhasil.')
   else
-    Writeln('Login gagal. Kembali ke menu utama.');
+    PesanError('Login gagal. Kembali ke menu utama.');
 end;
 
 procedure RegistrasiPelanggan;
@@ -549,13 +674,14 @@ var
   pelanggan, cek: TPelanggan;
   posisi: LongInt;
   nomorAsli: string;
+  usernameValid: Boolean;
 begin
   Judul('REGISTRASI PELANGGAN');
   pelanggan.idPelanggan := BuatIDPelanggan;
   pelanggan.nama := BacaTeks('Nama lengkap: ');
   while pelanggan.nama = '' do
   begin
-    Writeln('Nama tidak boleh kosong.');
+    PesanError('Nama tidak boleh kosong.');
     pelanggan.nama := BacaTeks('Nama lengkap: ');
   end;
 
@@ -563,34 +689,34 @@ begin
   pelanggan.nomorWA := NormalisasiNomorWA(nomorAsli);
   while (pelanggan.nomorWA = '') or (Length(pelanggan.nomorWA) < 10) do
   begin
-    Writeln('Nomor WhatsApp belum valid. Masukkan kembali.');
+    PesanError('Nomor WhatsApp belum valid. Masukkan kembali.');
     nomorAsli := BacaTeks('Nomor WhatsApp: ');
     pelanggan.nomorWA := NormalisasiNomorWA(nomorAsli);
   end;
 
-  pelanggan.username := BacaTeks('Buat username (minimal 3 karakter): ');
-  while Length(pelanggan.username) < 3 do
+  { Ulangi sampai username cukup panjang dan belum dipakai akun lain. }
+  usernameValid := False;
+  while not usernameValid do
   begin
-    Writeln('Username minimal 3 karakter.');
-    pelanggan.username := BacaTeks('Buat username: ');
+    pelanggan.username := BacaTeks('Buat username (minimal 3 karakter): ');
+    if Length(pelanggan.username) < 3 then
+      PesanError('Username minimal 3 karakter.')
+    else if CariPelangganUsername(pelanggan.username, cek, posisi) then
+      PesanError('Username tersebut sudah digunakan. Pilih username lain.')
+    else
+      usernameValid := True;
   end;
 
-  if CariPelangganUsername(pelanggan.username, cek, posisi) then
-  begin
-    Writeln('Username tersebut sudah digunakan. Silakan registrasi ulang dengan username berbeda.');
-    Exit;
-  end;
-
-  pelanggan.password := BacaTeks('Buat password: ');
+  pelanggan.password := BacaTeks('Buat password (minimal 4 karakter): ');
   while Length(pelanggan.password) < 4 do
   begin
-    Writeln('Password minimal 4 karakter.');
+    PesanError('Password minimal 4 karakter.');
     pelanggan.password := BacaTeks('Buat password: ');
   end;
 
   TambahPelanggan(pelanggan);
   Writeln;
-  Writeln('Registrasi berhasil!');
+  PesanSukses('Registrasi berhasil!');
   Writeln('ID Pelanggan: ', pelanggan.idPelanggan);
   Writeln('Silakan login menggunakan username dan password yang baru dibuat.');
 end;
@@ -602,12 +728,12 @@ var
   data: TPelanggan;
   posisi: LongInt;
 begin
+  Judul('LOGIN PELANGGAN');
   Result := False;
   percobaan := 0;
 
   while (percobaan < 3) and (not Result) do
   begin
-    Writeln;
     username := BacaTeks('Username: ');
     password := BacaTeks('Password: ');
 
@@ -621,21 +747,23 @@ begin
       else
       begin
         Inc(percobaan);
-        Writeln('Password salah. Percobaan ', percobaan, ' dari 3.');
+        PesanError('Password salah. Percobaan ' + IntToStr(percobaan) + ' dari 3.');
       end;
     end
     else
     begin
       Inc(percobaan);
-      Writeln('Username tidak ditemukan. Percobaan ', percobaan, ' dari 3.');
+      PesanError('Username tidak ditemukan. Percobaan ' + IntToStr(percobaan) + ' dari 3.');
     end;
   end;
 
   if Result then
-    Writeln('Selamat datang, ', pelangganAktif.nama, '!')
+    PesanSukses('Selamat datang, ' + pelangganAktif.nama + '!')
   else
-    Writeln('Login gagal.');
+    PesanError('Login gagal.');
 end;
+
+{ ===================== MENU PELANGGAN ===================== }
 
 procedure BuatPesanan(const pelangganAktif: TPelanggan);
 var
@@ -651,7 +779,7 @@ begin
   Writeln('Reguler: ', Rupiah(Pengaturan.hargaReguler), ' per kg');
   Writeln('Express: ', Rupiah(Pengaturan.hargaExpress), ' per kg');
   Writeln;
-  Writeln('Catatan: berat dan total final baru ditentukan setelah admin menimbang cucian.');
+  PesanPeringatan('Berat dan total final baru ditentukan setelah admin menimbang cucian.');
 
   p.idPesanan := BuatIDPesanan;
   p.idPelanggan := pelangganAktif.idPelanggan;
@@ -668,7 +796,7 @@ begin
   p.tanggalUpdate := TanggalSekarang;
 
   Writeln;
-  Writeln('Ringkasan pesanan:');
+  SubJudul('Ringkasan pesanan');
   Writeln('ID pesanan : ', p.idPesanan);
   Writeln('Layanan    : ', p.layanan);
   Writeln('Pembayaran : ', p.metodeBayar);
@@ -679,11 +807,11 @@ begin
   if SameText(konfirmasi, 'Y') then
   begin
     TambahPesanan(p);
-    Writeln('Pesanan berhasil disimpan. Catat ID pesanan: ', p.idPesanan);
+    PesanSukses('Pesanan berhasil disimpan. Catat ID pesanan: ' + p.idPesanan);
     Writeln('Silakan bawa cucian ke admin untuk ditimbang.');
   end
   else
-    Writeln('Pesanan dibatalkan dan tidak disimpan.');
+    PesanPeringatan('Pesanan dibatalkan dan tidak disimpan.');
 end;
 
 procedure LihatPesananPelanggan(const pelangganAktif: TPelanggan);
@@ -700,7 +828,7 @@ begin
     Writeln('Kamu belum memiliki pesanan.');
     Exit;
   end;
-  
+
   AssignFile(f, FILE_PESANAN);
   try
     Reset(f);
@@ -708,6 +836,7 @@ begin
     begin
       Seek(f, i);
       Read(f, p);
+      { Hanya pesanan milik akun yang sedang login yang ditampilkan. }
       if p.idPelanggan = pelangganAktif.idPelanggan then
       begin
         ada := True;
@@ -735,10 +864,10 @@ begin
     if p.idPelanggan = pelangganAktif.idPelanggan then
       TampilkanDetailPesanan(p)
     else
-      Writeln('Pesanan tersebut bukan milik akun yang sedang login.');
+      PesanError('Pesanan tersebut bukan milik akun yang sedang login.');
   end
   else
-    Writeln('ID pesanan tidak ditemukan. Periksa kembali ID yang dimasukkan.');
+    PesanError('ID pesanan tidak ditemukan. Periksa kembali ID yang dimasukkan.');
 end;
 
 procedure UbahMetodePembayaranPelanggan(const pelangganAktif: TPelanggan);
@@ -751,19 +880,19 @@ begin
   id := BacaTeks('Masukkan ID pesanan: ');
   if not CariPesananID(id, p, posisi) then
   begin
-    Writeln('Pesanan tidak ditemukan.');
+    PesanError('Pesanan tidak ditemukan.');
     Exit;
   end;
 
   if p.idPelanggan <> pelangganAktif.idPelanggan then
   begin
-    Writeln('Pesanan tersebut bukan milik akun yang sedang login.');
+    PesanError('Pesanan tersebut bukan milik akun yang sedang login.');
     Exit;
   end;
 
   if p.statusBayar = BAYAR_LUNAS then
   begin
-    Writeln('Metode pembayaran tidak dapat diubah karena pesanan sudah lunas.');
+    PesanError('Metode pembayaran tidak dapat diubah karena pesanan sudah lunas.');
     Exit;
   end;
 
@@ -771,7 +900,7 @@ begin
   p.metodeBayar := PilihMetodePembayaran;
   p.tanggalUpdate := TanggalSekarang;
   SimpanPerubahanPesanan(posisi, p);
-  Writeln('Metode pembayaran diperbarui menjadi: ', p.metodeBayar);
+  PesanSukses('Metode pembayaran diperbarui menjadi: ' + p.metodeBayar);
 end;
 
 procedure HubungiAdminUntukTransfer(const pelangganAktif: TPelanggan);
@@ -784,32 +913,32 @@ begin
   id := BacaTeks('Masukkan ID pesanan: ');
   if not CariPesananID(id, p, posisi) then
   begin
-    Writeln('Pesanan tidak ditemukan.');
+    PesanError('Pesanan tidak ditemukan.');
     Exit;
   end;
 
   if p.idPelanggan <> pelangganAktif.idPelanggan then
   begin
-    Writeln('Pesanan tersebut bukan milik akun yang sedang login.');
+    PesanError('Pesanan tersebut bukan milik akun yang sedang login.');
     Exit;
   end;
 
   if p.metodeBayar <> METODE_TRANSFER then
   begin
-    Writeln('Pesanan ini tidak menggunakan metode transfer.');
+    PesanPeringatan('Pesanan ini tidak menggunakan metode transfer.');
     Writeln('Kamu dapat mengubah metode pembayaran jika pesanan belum lunas.');
     Exit;
   end;
 
   if not p.sudahDitimbang then
-    Writeln('Catatan: biaya final belum tersedia karena cucian belum ditimbang.');
+    PesanPeringatan('Biaya final belum tersedia karena cucian belum ditimbang.');
 
   pesan := 'Halo Admin SI-PANDRI, saya ingin meminta informasi pembayaran transfer.' + #10 +
            'ID Pesanan: ' + p.idPesanan + #10 +
            'Nama: ' + p.namaPelanggan + #10 +
            'Layanan: ' + p.layanan + #10;
   if p.sudahDitimbang then
-    pesan := pesan + 'Berat aktual: ' + FormatFloat('0.##', p.beratKg, FormatIndonesia) + ' kg' + #10 +
+    pesan := pesan + 'Berat aktual: ' + TeksBerat(p.beratKg) + #10 +
              'Total biaya: ' + Rupiah(p.totalBiaya) + #10;
   pesan := pesan + 'Mohon kirimkan nomor rekening dan petunjuk pembayaran. Terima kasih.';
 
@@ -827,6 +956,7 @@ begin
     Writeln('3. Cek status berdasarkan ID');
     Writeln('4. Ubah metode pembayaran');
     Writeln('5. Hubungi admin untuk transfer via WhatsApp');
+    GarisTipis;
     Writeln('6. Logout');
     pilihan := BacaInteger('Pilih menu: ', 1, 6);
 
@@ -836,9 +966,9 @@ begin
       3: CekStatusPesananPelanggan(pelangganAktif);
       4: UbahMetodePembayaranPelanggan(pelangganAktif);
       5: HubungiAdminUntukTransfer(pelangganAktif);
-      6: Writeln('Logout pelanggan berhasil.');
+      6: PesanSukses('Logout pelanggan berhasil.');
     else
-      Writeln('Pilihan tidak valid.');
+      PesanError('Pilihan tidak valid.');
     end;
 
     if pilihan <> 6 then
@@ -856,6 +986,7 @@ begin
     Judul('AKSES PELANGGAN');
     Writeln('1. Registrasi akun baru');
     Writeln('2. Login pelanggan');
+    GarisTipis;
     Writeln('3. Kembali ke menu utama');
     pilihan := BacaInteger('Pilih menu: ', 1, 3);
 
@@ -873,16 +1004,19 @@ begin
          end;
       3: Writeln('Kembali ke menu utama.');
     else
-      Writeln('Pilihan tidak valid.');
+      PesanError('Pilihan tidak valid.');
     end;
   until pilihan = 3;
 end;
+
+{ ===================== MENU ADMIN ===================== }
 
 procedure TampilkanSemuaPesanan;
 var
   f: TFilePesanan;
   p: TPesanan;
   i: LongInt;
+  teksBeratKolom, teksTotal, teksBayar: string;
 begin
   Judul('DAFTAR SEMUA PESANAN');
   if not FileExists(FILE_PESANAN) then Exit;
@@ -893,18 +1027,33 @@ begin
       Writeln('Belum ada pesanan yang tercatat.')
     else
     begin
+      Writeln(Format('%-8s %-13s %-8s %7s %12s %-6s %-18s',
+        ['ID', 'Nama', 'Layanan', 'Berat', 'Total', 'Bayar', 'Status cucian']));
+      GarisTipis;
       for i := 0 to FileSize(f) - 1 do
       begin
         Seek(f, i);
         Read(f, p);
-        Writeln('ID: ', p.idPesanan, ' | ', p.namaPelanggan, ' | ', p.layanan,
-          ' | ', p.statusCucian, ' | ', p.statusBayar);
         if p.sudahDitimbang then
-          Writeln('   Berat: ', FormatFloat('0.##', p.beratKg, FormatIndonesia), ' kg | Total: ', Rupiah(p.totalBiaya))
+        begin
+          teksBeratKolom := TeksBerat(p.beratKg);
+          teksTotal := Rupiah(p.totalBiaya);
+        end
         else
-          Writeln('   Berat dan total belum ditentukan (menunggu admin menimbang).');
-        Writeln;
+        begin
+          teksBeratKolom := '-';
+          teksTotal := 'belum';
+        end;
+        if p.statusBayar = BAYAR_LUNAS then
+          teksBayar := 'Lunas'
+        else
+          teksBayar := 'Belum';
+        Writeln(Format('%-8s %-13s %-8s %7s %12s %-6s %-18s',
+          [p.idPesanan, Copy(p.namaPelanggan, 1, 13), p.layanan, teksBeratKolom,
+           teksTotal, teksBayar, p.statusCucian]));
       end;
+      GarisTipis;
+      Writeln('Gunakan menu 6 (Cari pesanan) untuk melihat detail lengkap.');
     end;
   finally
     CloseFile(f);
@@ -923,11 +1072,30 @@ begin
   id := BacaTeks('Masukkan ID pesanan: ');
   if not CariPesananID(id, p, posisi) then
   begin
-    Writeln('Pesanan tidak ditemukan.');
+    PesanError('Pesanan tidak ditemukan.');
     Exit;
   end;
 
   TampilkanDetailPesanan(p);
+
+  { Pesanan lunas tidak boleh ditimbang ulang agar total yang sudah dibayar tidak berubah. }
+  if p.statusBayar = BAYAR_LUNAS then
+  begin
+    PesanError('Pesanan sudah lunas. Berat dan total tidak dapat diubah lagi.');
+    Exit;
+  end;
+
+  if p.sudahDitimbang then
+  begin
+    PesanPeringatan('Pesanan ini sudah ditimbang: ' + TeksBerat(p.beratKg) + ', total ' +
+      Rupiah(p.totalBiaya) + '.');
+    if not SameText(BacaTeks('Timbang ulang dan hitung ulang total? (Y untuk ya): '), 'Y') then
+    begin
+      Writeln('Data penimbangan tidak diubah.');
+      Exit;
+    end;
+  end;
+
   berat := BacaReal('Masukkan berat aktual (kg): ', 0.01, 500);
 
   if SameText(p.layanan, LAYANAN_EXPRESS) then
@@ -935,6 +1103,7 @@ begin
   else
     hargaPerKg := Pengaturan.hargaReguler;
 
+  { Rumus inti: total biaya = berat aktual x tarif per kg layanan. }
   p.beratKg := berat;
   p.sudahDitimbang := True;
   p.totalBiaya := berat * hargaPerKg;
@@ -944,8 +1113,8 @@ begin
   SimpanPerubahanPesanan(posisi, p);
 
   Writeln;
-  Writeln('Data penimbangan berhasil disimpan.');
-  Writeln('Berat aktual : ', FormatFloat('0.##', p.beratKg, FormatIndonesia), ' kg');
+  PesanSukses('Data penimbangan berhasil disimpan.');
+  Writeln('Berat aktual : ', TeksBerat(p.beratKg));
   Writeln('Tarif per kg : ', Rupiah(hargaPerKg));
   Writeln('Total biaya  : ', Rupiah(p.totalBiaya));
   Writeln('Status cucian: ', p.statusCucian);
@@ -954,7 +1123,8 @@ end;
 procedure PengaturanHargaDanTransfer;
 var
   pilihan: Integer;
-  teks: string;
+  teks, bankBaru, rekeningBaru, pemilikBaru: string;
+  berubah: Boolean;
 begin
   repeat
     Judul('PENGATURAN HARGA DAN TRANSFER');
@@ -969,39 +1139,58 @@ begin
     Writeln('2. Ubah harga express');
     Writeln('3. Ubah nomor WhatsApp admin');
     Writeln('4. Ubah informasi rekening');
+    GarisTipis;
     Writeln('5. Kembali');
     pilihan := BacaInteger('Pilih pengaturan: ', 1, 5);
+    berubah := False;
 
     case pilihan of
-      1: Pengaturan.hargaReguler := BacaReal('Harga reguler per kg: Rp ', 1, 10000000);
-      2: Pengaturan.hargaExpress := BacaReal('Harga express per kg: Rp ', 1, 10000000);
+      1: begin
+           Pengaturan.hargaReguler := BacaReal('Harga reguler per kg: Rp ', 1, 10000000);
+           berubah := True;
+         end;
+      2: begin
+           Pengaturan.hargaExpress := BacaReal('Harga express per kg: Rp ', 1, 10000000);
+           berubah := True;
+         end;
       3: begin
            teks := BacaTeks('Nomor WhatsApp admin: ');
            teks := NormalisasiNomorWA(teks);
            if Length(teks) >= 10 then
-             Pengaturan.nomorWAAdmin := teks
+           begin
+             Pengaturan.nomorWAAdmin := teks;
+             berubah := True;
+           end
            else
-             Writeln('Nomor tidak valid; perubahan dibatalkan.');
+             PesanError('Nomor tidak valid; perubahan dibatalkan.');
          end;
       4: begin
-           Pengaturan.namaBank := BacaTeks('Nama bank: ');
-           Pengaturan.nomorRekening := BacaTeks('Nomor rekening: ');
-           Pengaturan.pemilikRekening := BacaTeks('Nama pemilik rekening: ');
-           if (Pengaturan.namaBank = '') or (Pengaturan.nomorRekening = '') or
-              (Pengaturan.pemilikRekening = '') then
-             Writeln('Peringatan: ada data kosong. Periksa kembali pengaturan rekening.');
+           bankBaru := BacaTeks('Nama bank: ');
+           rekeningBaru := BacaTeks('Nomor rekening: ');
+           pemilikBaru := BacaTeks('Nama pemilik rekening: ');
+           if (bankBaru = '') or (rekeningBaru = '') or (pemilikBaru = '') then
+             PesanError('Ada data kosong. Informasi rekening lama tetap dipakai.')
+           else
+           begin
+             Pengaturan.namaBank := bankBaru;
+             Pengaturan.nomorRekening := rekeningBaru;
+             Pengaturan.pemilikRekening := pemilikBaru;
+             berubah := True;
+           end;
          end;
       5: Writeln('Kembali ke menu admin.');
     else
-      Writeln('Pilihan tidak valid.');
+      PesanError('Pilihan tidak valid.');
     end;
 
-    if pilihan <> 5 then
+    if berubah then
     begin
       SimpanPengaturan;
-      Writeln('Pengaturan disimpan.');
-      Jeda;
+      PesanSukses('Pengaturan disimpan.');
+      Writeln('Catatan: total pesanan yang sudah ditimbang tidak ikut berubah.');
     end;
+    if pilihan <> 5 then
+      Jeda;
   until pilihan = 5;
 end;
 
@@ -1011,12 +1200,13 @@ var
   p: TPesanan;
   posisi: LongInt;
   pilihan: Integer;
+  berubah: Boolean;
 begin
   Judul('PERBARUI STATUS PEMBAYARAN');
   id := BacaTeks('Masukkan ID pesanan: ');
   if not CariPesananID(id, p, posisi) then
   begin
-    Writeln('Pesanan tidak ditemukan.');
+    PesanError('Pesanan tidak ditemukan.');
     Exit;
   end;
 
@@ -1025,47 +1215,59 @@ begin
   Writeln('2. Tandai Belum Dibayar');
   Writeln('3. Batal');
   pilihan := BacaInteger('Pilihan: ', 1, 3);
+  berubah := False;
 
   case pilihan of
     1: begin
-         Writeln('Pastikan pembayaran tunai sudah diterima atau transfer sudah diverifikasi.');
-         if SameText(BacaTeks('Sudah diverifikasi? (Y untuk ya): '), 'Y') then
-           p.statusBayar := BAYAR_LUNAS
+         if not p.sudahDitimbang then
+           PesanError('Cucian belum ditimbang, jadi total biaya belum diketahui. Timbang dahulu.')
          else
-           Writeln('Status tidak diubah.');
+         begin
+           PesanPeringatan('Pastikan pembayaran tunai sudah diterima atau transfer sudah diverifikasi.');
+           if SameText(BacaTeks('Sudah diverifikasi? (Y untuk ya): '), 'Y') then
+           begin
+             p.statusBayar := BAYAR_LUNAS;
+             berubah := True;
+           end
+           else
+             Writeln('Status tidak diubah.');
+         end;
        end;
-    2: p.statusBayar := BAYAR_BELUM;
+    2: begin
+         p.statusBayar := BAYAR_BELUM;
+         berubah := True;
+       end;
     3: Writeln('Perubahan dibatalkan.');
   else
-    Writeln('Pilihan tidak valid.');
+    PesanError('Pilihan tidak valid.');
   end;
 
-  if pilihan in [1, 2] then
+  if berubah then
   begin
     p.tanggalUpdate := TanggalSekarang;
     SimpanPerubahanPesanan(posisi, p);
-    Writeln('Status pembayaran sekarang: ', p.statusBayar);
+    PesanSukses('Status pembayaran sekarang: ' + p.statusBayar);
   end;
 end;
 
 procedure UbahStatusCucian;
 var
-  id: string;
+  id, statusBaru: string;
   p: TPesanan;
   posisi: LongInt;
-  pilihan: Integer;
+  pilihan, indeksLama, indeksBaru: Integer;
 begin
   Judul('PERBARUI STATUS CUCIAN');
   id := BacaTeks('Masukkan ID pesanan: ');
   if not CariPesananID(id, p, posisi) then
   begin
-    Writeln('Pesanan tidak ditemukan.');
+    PesanError('Pesanan tidak ditemukan.');
     Exit;
   end;
 
   if not p.sudahDitimbang then
   begin
-    Writeln('Status belum dapat diproses karena cucian belum ditimbang.');
+    PesanError('Status belum dapat diproses karena cucian belum ditimbang.');
     Writeln('Masukkan berat aktual terlebih dahulu.');
     Exit;
   end;
@@ -1079,21 +1281,42 @@ begin
   pilihan := BacaInteger('Status baru: ', 1, 5);
 
   case pilihan of
-    1: p.statusCucian := STATUS_MENUNGGU_PROSES;
-    2: p.statusCucian := STATUS_PROSES;
-    3: p.statusCucian := STATUS_SIAP;
-    4: p.statusCucian := STATUS_SELESAI;
-    5: Writeln('Status tidak diubah.');
+    1: statusBaru := STATUS_MENUNGGU_PROSES;
+    2: statusBaru := STATUS_PROSES;
+    3: statusBaru := STATUS_SIAP;
+    4: statusBaru := STATUS_SELESAI;
   else
-    Writeln('Pilihan tidak valid.');
+    statusBaru := '';
   end;
 
-  if pilihan <> 5 then
+  if statusBaru = '' then
   begin
-    p.tanggalUpdate := TanggalSekarang;
-    SimpanPerubahanPesanan(posisi, p);
-    Writeln('Status cucian diperbarui menjadi: ', p.statusCucian);
+    Writeln('Status tidak diubah.');
+    Exit;
   end;
+
+  { Status boleh maju satu tahap atau dikoreksi mundur, tetapi tidak boleh melompat. }
+  indeksLama := IndeksStatus(p.statusCucian);
+  indeksBaru := IndeksStatus(statusBaru);
+  if indeksBaru = indeksLama then
+  begin
+    PesanPeringatan('Status yang dipilih sama dengan status saat ini. Tidak ada perubahan.');
+    Exit;
+  end
+  else if indeksBaru > indeksLama + 1 then
+  begin
+    PesanError('Status tidak boleh melompati tahap. Dari "' + p.statusCucian +
+      '" lanjutkan dulu ke tahap berikutnya.');
+    Exit;
+  end;
+
+  if indeksBaru < indeksLama then
+    PesanPeringatan('Status dikoreksi mundur ke tahap sebelumnya.');
+
+  p.statusCucian := statusBaru;
+  p.tanggalUpdate := TanggalSekarang;
+  SimpanPerubahanPesanan(posisi, p);
+  PesanSukses('Status cucian diperbarui menjadi: ' + p.statusCucian);
 end;
 
 procedure CariDanTampilkanPesanan;
@@ -1107,7 +1330,7 @@ begin
   if CariPesananID(id, p, posisi) then
     TampilkanDetailPesanan(p)
   else
-    Writeln('Pesanan tidak ditemukan.');
+    PesanError('Pesanan tidak ditemukan.');
 end;
 
 procedure SiapkanPesanTagihanWhatsApp;
@@ -1120,20 +1343,20 @@ begin
   id := BacaTeks('Masukkan ID pesanan: ');
   if not CariPesananID(id, p, posisi) then
   begin
-    Writeln('Pesanan tidak ditemukan.');
+    PesanError('Pesanan tidak ditemukan.');
     Exit;
   end;
 
   if not p.sudahDitimbang then
   begin
-    Writeln('Cucian harus ditimbang terlebih dahulu sebelum total biaya dikirim.');
+    PesanError('Cucian harus ditimbang terlebih dahulu sebelum total biaya dikirim.');
     Exit;
   end;
 
   if p.metodeBayar = METODE_TRANSFER then
     pesan := 'Halo ' + p.namaPelanggan + ', berikut informasi pesanan SI-PANDRI.' + #10 +
              'ID Pesanan: ' + p.idPesanan + #10 +
-             'Berat: ' + FormatFloat('0.##', p.beratKg, FormatIndonesia) + ' kg' + #10 +
+             'Berat: ' + TeksBerat(p.beratKg) + #10 +
              'Layanan: ' + p.layanan + #10 +
              'Total biaya: ' + Rupiah(p.totalBiaya) + #10 +
              'Metode: Transfer bank' + #10 +
@@ -1144,7 +1367,7 @@ begin
   else
     pesan := 'Halo ' + p.namaPelanggan + ', berikut informasi pesanan SI-PANDRI.' + #10 +
              'ID Pesanan: ' + p.idPesanan + #10 +
-             'Berat: ' + FormatFloat('0.##', p.beratKg, FormatIndonesia) + ' kg' + #10 +
+             'Berat: ' + TeksBerat(p.beratKg) + #10 +
              'Layanan: ' + p.layanan + #10 +
              'Total biaya: ' + Rupiah(p.totalBiaya) + #10 +
              'Metode pembayaran: Tunai. Silakan lakukan pembayaran kepada admin sesuai kesepakatan. Terima kasih.';
@@ -1162,20 +1385,20 @@ begin
   id := BacaTeks('Masukkan ID pesanan: ');
   if not CariPesananID(id, p, posisi) then
   begin
-    Writeln('Pesanan tidak ditemukan.');
+    PesanError('Pesanan tidak ditemukan.');
     Exit;
   end;
 
   if (p.statusCucian <> STATUS_SIAP) and (p.statusCucian <> STATUS_SELESAI) then
   begin
-    Writeln('Status cucian belum Siap Diambil. Periksa status sebelum mengirim notifikasi.');
+    PesanError('Status cucian belum Siap Diambil. Periksa status sebelum mengirim notifikasi.');
     Exit;
   end;
 
   pesan := 'Halo ' + p.namaPelanggan + ', kami informasikan bahwa cucian kamu sudah siap diambil.' + #10 +
            'ID Pesanan: ' + p.idPesanan + #10 +
            'Layanan: ' + p.layanan + #10 +
-           'Berat: ' + FormatFloat('0.##', p.beratKg, FormatIndonesia) + ' kg' + #10 +
+           'Berat: ' + TeksBerat(p.beratKg) + #10 +
            'Total biaya: ' + Rupiah(p.totalBiaya) + #10 +
            'Status pembayaran: ' + p.statusBayar + #10 +
            'Silakan datang ke laundry untuk mengambil cucian. Terima kasih telah menggunakan SI-PANDRI.';
@@ -1271,16 +1494,17 @@ var
 begin
   repeat
     Judul('MENU ADMIN SI-PANDRI');
-    Writeln('1. Lihat semua pesanan');
-    Writeln('2. Input berat aktual dan hitung biaya');
-    Writeln('3. Pengaturan harga dan transfer');
-    Writeln('4. Perbarui status pembayaran');
-    Writeln('5. Perbarui status cucian');
-    Writeln('6. Cari pesanan berdasarkan ID');
-    Writeln('7. Siapkan pesan tagihan via WhatsApp');
-    Writeln('8. Siapkan notifikasi cucian siap diambil');
-    Writeln('9. Laporan transaksi');
+    Writeln(' 1. Lihat semua pesanan');
+    Writeln(' 2. Input berat aktual dan hitung biaya');
+    Writeln(' 3. Pengaturan harga dan transfer');
+    Writeln(' 4. Perbarui status pembayaran');
+    Writeln(' 5. Perbarui status cucian');
+    Writeln(' 6. Cari pesanan berdasarkan ID');
+    Writeln(' 7. Siapkan pesan tagihan via WhatsApp');
+    Writeln(' 8. Siapkan notifikasi cucian siap diambil');
+    Writeln(' 9. Laporan transaksi');
     Writeln('10. Lihat daftar pelanggan');
+    GarisTipis;
     Writeln('11. Logout');
     pilihan := BacaInteger('Pilih menu: ', 1, 11);
 
@@ -1295,15 +1519,18 @@ begin
       8: SiapkanPesanCucianSelesai;
       9: LaporanAdmin;
       10: TampilkanDaftarPelanggan;
-      11: Writeln('Logout admin berhasil.');
+      11: PesanSukses('Logout admin berhasil.');
     else
-      Writeln('Pilihan tidak valid.');
+      PesanError('Pilihan tidak valid.');
     end;
 
-    if pilihan <> 11 then
+    { Menu pengaturan sudah memiliki jeda sendiri di dalamnya. }
+    if (pilihan <> 11) and (pilihan <> 3) then
       Jeda;
   until pilihan = 11;
 end;
+
+{ ===================== PROGRAM UTAMA ===================== }
 
 var
   pilihanUtama: Integer;
@@ -1312,15 +1539,15 @@ begin
   FormatIndonesia.DecimalSeparator := ',';
   FormatIndonesia.ThousandSeparator := '.';
 
+  AktifkanWarnaTerminal;
   SiapkanFileData;
 
   repeat
-    Judul('SI-PANDRI - SISTEM PENGELOLAAN PARFAIT LAUNDRY');
-    Writeln('Laundry lebih mudah, lebih teratur.');
-    Writeln;
-    Writeln('1. Login Admin');
-    Writeln('2. Menu Pelanggan');
-    Writeln('3. Keluar');
+    TampilkanBanner;
+    Writeln('  MENU UTAMA');
+    Writeln('  1. Login Admin');
+    Writeln('  2. Menu Pelanggan');
+    Writeln('  3. Keluar');
     pilihanUtama := BacaInteger('Pilih menu utama: ', 1, 3);
 
     case pilihanUtama of
@@ -1331,9 +1558,9 @@ begin
              Jeda;
          end;
       2: GerbangPelanggan;
-      3: Writeln('Terima kasih telah menggunakan SI-PANDRI.');
+      3: PesanSukses('Terima kasih telah menggunakan SI-PANDRI.');
     else
-      Writeln('Pilihan tidak valid.');
+      PesanError('Pilihan tidak valid.');
     end;
   until pilihanUtama = 3;
 end.
