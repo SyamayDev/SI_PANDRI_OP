@@ -521,7 +521,7 @@
           if (err.length) {
             out.appendChild(term(err, 'Pesan validasi yang sama dengan aplikasi Pascal'));
             G.sfx.bad(); G.ui.shake(f);
-            G.react('sarah', 'Program menolak data yang belum valid dan meminta kita mengisinya lagi. Perbaiki yang ditandai, ya.', 'thinking');
+            G.react('sarah', 'Program menolak data yang belum valid dan meminta kita mengisinya lagi.', 'thinking');
             return;
           }
           Object.assign(s, { nama: v.nama.trim().slice(0, 50), wa: v.wa.trim(), username: v.username.trim(), idPelanggan: 'PL0001' });
