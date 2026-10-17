@@ -91,9 +91,9 @@ Untuk presentasi UTS, aplikasi ini dilengkapi **game web interaktif berbasis nar
 
 | No | Nama Lengkap | NIM | KOM | Lab |
 |:-:|:--|:-:|:-:|:-:|
-| 1 | *[Nama Anggota 1]* | *[NIM]* | *[KOM]* | *[Lab]* |
-| 2 | *[Nama Anggota 2]* | *[NIM]* | *[KOM]* | *[Lab]* |
-| 3 | *[Nama Anggota 3]* | *[NIM]* | *[KOM]* | *[Lab]* |
+| 1 | *Syahril Maymubdi* | *261401130* | *A* | *LAB DP2* |
+| 2 | *Sabitha Sarah* | *261401124* | *A* | *LAB DP2* |
+| 3 | *Gilbert Kindly* | *261401127* | *A* | *LAB DP2* |
 
 </div>
 
